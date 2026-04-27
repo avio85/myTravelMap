@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My World Travels</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root {
+  --bg:#0a0f1a; --surface:#111827; --surface2:#1e2a3a;
+  --border:#2a3a4a; --text:#e6edf3; --muted:#6b7f94;
+  --accent:#f0a500; --accent2:#e05c2e; --pin:#f0a500;
+  --sw:290px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
+
+/* HEADER */
+header{height:52px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;z-index:1000;}
+header h1{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--accent);display:flex;align-items:center;gap:8px;}
+header h1 span{color:var(--muted);font-size:0.78rem;font-family:'DM Sans',sans-serif;font-weight:400;}
+.hright{display:flex;align-items:center;gap:16px;}
+.stats{display:flex;gap:16px;}
+.stat{text-align:center;}
+.sv{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--accent);line-height:1;}
+.sl{font-size:0.58rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-top:1px;}
+.tbtn{width:34px;height:34px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:7px;color:var(--muted);cursor:pointer;display:flex;align-items:center;
+  justify-content:center;font-size:1.05rem;transition:all 0.2s;flex-shrink:0;}
+.tbtn:hover{border-color:var(--accent);color:var(--accent);}
+
+/* LAYOUT */
+.layout{flex:1;display:flex;overflow:hidden;position:relative;height:calc(100vh - 52px);}
+
+/* SIDEBAR */
+.sidebar{width:var(--sw);background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;
+  transition:width 0.28s ease,opacity 0.28s ease;z-index:1000;}
+.sidebar.closed{width:0;opacity:0;pointer-events:none;border-right:none;}
+.sec-title{padding:11px 15px 8px;font-size:0.63rem;text-transform:uppercase;
+  letter-spacing:0.12em;color:var(--muted);border-bottom:1px solid var(--border);flex-shrink:0;}
+
+/* ADD FORM */
+.add-form{padding:11px 13px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:7px;flex-shrink:0;}
+.steps{display:flex;}
+.step{flex:1;text-align:center;font-size:0.59rem;text-transform:uppercase;letter-spacing:0.08em;
+  padding:4px;color:var(--muted);border-bottom:2px solid var(--border);transition:all 0.2s;}
+.step.on{color:var(--accent);border-bottom-color:var(--accent);}
+.step.done{color:#4dc4ff;border-bottom-color:#4dc4ff;}
+.acw{position:relative;width:100%;}
+.aci{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  padding:7px 10px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:0.82rem;outline:none;transition:border-color 0.2s;}
+.aci:focus{border-color:var(--accent);}
+.aci::placeholder{color:var(--muted);}
+.aci:disabled{opacity:0.35;cursor:not-allowed;}
+.acd{position:absolute;top:calc(100% + 3px);left:0;right:0;background:var(--surface);
+  border:1px solid var(--border);border-radius:7px;z-index:2000;max-height:195px;
+  overflow-y:auto;box-shadow:0 8px 30px rgba(0,0,0,0.65);display:none;}
+.acd.open{display:block;}
+.acd::-webkit-scrollbar{width:3px;}
+.acd::-webkit-scrollbar-thumb{background:var(--border);}
+.ac-loading{padding:10px 12px;font-size:0.78rem;color:var(--muted);display:flex;align-items:center;gap:8px;}
+.ac-spin{width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.acr{padding:7px 11px;font-size:0.82rem;cursor:pointer;color:var(--muted);
+  display:flex;align-items:center;gap:8px;transition:background 0.1s;}
+.acr:hover,.acr.hi{background:var(--surface2);color:var(--text);}
+.acr .sub{font-size:0.66rem;color:var(--muted);margin-left:auto;white-space:nowrap;}
+.cbadge{display:none;align-items:center;gap:7px;background:#1a3d5c2a;
+  border:1px solid #1a6896;border-radius:6px;padding:5px 10px;font-size:0.8rem;color:#4dc4ff;}
+.cbadge.on{display:flex;}
+.bx{margin-left:auto;font-size:0.8rem;color:var(--muted);cursor:pointer;}
+.bx:hover{color:var(--accent2);}
+.addbtn{background:var(--accent);color:#0d1117;border:none;padding:7px 12px;border-radius:6px;
+  font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:500;cursor:pointer;
+  transition:background 0.2s;display:none;}
+.addbtn:hover{background:#f5b830;}
+
+/* CITY LIST */
+.clist{flex:1;overflow-y:auto;padding:5px 0;}
+.clist::-webkit-scrollbar{width:3px;}
+.clist::-webkit-scrollbar-thumb{background:var(--border);}
+.cg{margin-bottom:2px;}
+.cgh{padding:6px 13px 3px;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;
+  color:var(--accent);display:flex;align-items:center;justify-content:space-between;}
+.ci{padding:4px 13px 4px 24px;font-size:0.79rem;color:var(--muted);
+  display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background 0.12s;}
+.ci:hover{background:var(--surface2);color:var(--text);}
+.cdot{width:5px;height:5px;border-radius:50%;background:var(--pin);margin-right:7px;flex-shrink:0;}
+  .cdot.transit{background:#3dd68c;}
+.cil{display:flex;align-items:center;}
+.delbtn{background:transparent;color:#e05c2e33;border:none;font-size:0.75rem;
+  cursor:pointer;padding:1px 5px;border-radius:3px;transition:color 0.15s;}
+.delbtn:hover{color:var(--accent2);}
+
+/* LEGEND */
+.legend{padding:9px 13px;border-top:1px solid var(--border);flex-shrink:0;}
+.lt{font-size:0.6rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:6px;}
+.lr{display:flex;gap:5px;flex-wrap:wrap;}
+.li{display:flex;align-items:center;gap:4px;font-size:0.66rem;color:var(--muted);}
+.lsw{width:13px;height:9px;border-radius:2px;border:1px solid rgba(255,255,255,0.15);}
+
+/* MAP */
+#map{flex:1;z-index:1;width:100%;height:100%;}
+
+/* Custom pin popup */
+.leaflet-popup-content-wrapper{
+  background:var(--surface);border:1px solid var(--border);
+  border-left:3px solid var(--accent);border-radius:7px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.5);color:var(--text);
+  font-family:'DM Sans',sans-serif;
+}
+.leaflet-popup-tip{background:var(--surface);}
+.leaflet-popup-content{margin:10px 14px;font-size:0.82rem;}
+.leaflet-popup-content strong{font-family:'Playfair Display',serif;font-size:0.95rem;display:block;color:var(--text);}
+.leaflet-popup-content span{color:var(--muted);font-size:0.74rem;}
+.leaflet-container{background:#0e1825;}
+
+/* Override leaflet attribution */
+.leaflet-control-attribution{background:rgba(10,15,26,0.7)!important;color:#4a6070!important;font-size:0.6rem!important;}
+.leaflet-control-attribution a{color:#4a7a9b!important;}
+.leaflet-control-zoom a{background:var(--surface)!important;color:var(--muted)!important;border-color:var(--border)!important;}
+.leaflet-control-zoom a:hover{background:var(--surface2)!important;color:var(--accent)!important;}
+
+/* Layer toggle button */
+.layer-btn{
+  position:absolute;bottom:20px;right:10px;z-index:900;
+  background:var(--surface);border:1px solid var(--border);color:var(--muted);
+  border-radius:7px;padding:6px 10px;font-size:0.72rem;font-family:'DM Sans',sans-serif;
+  cursor:pointer;transition:all 0.2s;
+}
+.layer-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+.empty{padding:16px;text-align:center;color:var(--muted);font-size:0.79rem;line-height:1.6;}
+.empty span{display:block;font-size:1.4rem;margin-bottom:5px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>✈ My World Travels <span>— personal map</span></h1>
+  <div class="hright">
+    <div class="stats">
+      <div class="stat"><div class="sv" id="cnt-c">0</div><div class="sl">Countries</div></div>
+      <div class="stat"><div class="sv" id="cnt-ci">0</div><div class="sl">Cities</div></div>
+    </div>
+    <button class="tbtn" id="tbtn" title="Toggle panel">☰</button>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="sec-title">Add a visited city</div>
+    <div class="add-form">
+      <div class="steps">
+        <div class="step on" id="s1">1 · Country</div>
+        <div class="step" id="s2">2 · City</div>
+      </div>
+      <div class="acw" id="cwrap">
+        <input class="aci" id="cinput" placeholder="Type a country…" autocomplete="off"/>
+        <div class="acd" id="cdrop"></div>
+      </div>
+      <div class="cbadge" id="cbadge">
+        <span id="bflag"></span><span id="bname"></span>
+        <span class="bx" onclick="clearC()">✕</span>
+      </div>
+      <div class="acw" id="xwrap" style="display:none">
+        <input class="aci" id="xinput" placeholder="Type a city…" autocomplete="off" disabled/>
+        <div class="acd" id="xdrop"></div>
+      </div>
+      <button class="addbtn" id="addbtn" onclick="doAdd()">+ Add City</button>
+    </div>
+    <div class="sec-title">Your visits</div>
+    <div class="clist" id="clist"></div>
+    <div style="padding:8px 13px;border-top:1px solid var(--border);display:flex;gap:6px;flex-shrink:0;">
+      <button onclick="exportCities()" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:6px;border-radius:6px;font-size:0.7rem;cursor:pointer;font-family:'DM Sans',sans-serif;" title="Download your cities as a backup file">⬇ Export</button>
+      <button onclick="document.getElementById('importFile').click()" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:6px;border-radius:6px;font-size:0.7rem;cursor:pointer;font-family:'DM Sans',sans-serif;" title="Restore cities from a backup file">⬆ Import</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importCities(event)"/>
+    </div>
+    <div class="legend">
+      <div class="lt">Cities visited</div>
+      <div class="lr">
+        <div class="li"><div class="lsw" style="background:rgba(30,60,90,0.55)"></div>None</div>
+        <div class="li"><span style="font-size:0.85rem;color:#3dd68c;line-height:1">✈</span>&nbsp;Transit only</div>
+        <div class="li"><div class="lsw" style="background:rgba(26,100,180,0.65)"></div>1–2</div>
+        <div class="li"><div class="lsw" style="background:rgba(26,140,210,0.7)"></div>3–4</div>
+        <div class="li"><div class="lsw" style="background:rgba(26,180,230,0.75)"></div>5–7</div>
+        <div class="li"><div class="lsw" style="background:rgba(80,210,255,0.8)"></div>8–10</div>
+        <div class="li"><div class="lsw" style="background:rgba(140,235,255,0.85)"></div>11+</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div style="flex:1;position:relative;height:100%;display:flex;flex-direction:column;">
+    <div id="map" style="flex:1;"></div>
+    <button class="layer-btn" id="layer-btn" onclick="toggleLayer()">🛰 Satellite</button>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA
+// ─────────────────────────────────────────────────────────────────────────────
+const COORDS = {
+  "New York":[40.71,-74.01],"Los Angeles":[34.05,-118.24],"Chicago":[41.88,-87.63],
+  "San Francisco":[37.77,-122.42],"Miami":[25.78,-80.21],"Las Vegas":[36.17,-115.14],
+  "Seattle":[47.61,-122.33],"Boston":[42.36,-71.06],"Washington DC":[38.91,-77.04],
+  "Houston":[29.76,-95.37],"New Orleans":[29.95,-90.07],"Nashville":[36.17,-86.78],
+  "Austin":[30.27,-97.74],"Denver":[39.74,-104.98],"Atlanta":[33.75,-84.39],
+  "London":[51.51,-0.13],"Paris":[48.86,2.35],"Rome":[41.90,12.50],
+  "Barcelona":[41.39,2.17],"Madrid":[40.42,-3.70],"Amsterdam":[52.37,4.90],
+  "Berlin":[52.52,13.41],"Vienna":[48.21,16.37],"Prague":[50.08,14.44],
+  "Budapest":[47.50,19.04],"Lisbon":[38.72,-9.14],"Athens":[37.98,23.73],
+  "Stockholm":[59.33,18.07],"Oslo":[59.91,10.75],"Copenhagen":[55.68,12.57],
+  "Zurich":[47.38,8.54],"Brussels":[50.85,4.35],"Warsaw":[52.23,21.01],
+  "Dublin":[53.33,-6.25],"Edinburgh":[55.95,-3.19],"Istanbul":[41.01,28.95],
+  "Tokyo":[35.69,139.69],"Beijing":[39.91,116.39],"Shanghai":[31.23,121.47],
+  "Hong Kong":[22.32,114.17],"Seoul":[37.57,126.98],"Singapore":[1.35,103.82],
+  "Bangkok":[13.75,100.50],"Mumbai":[19.08,72.88],"Delhi":[28.61,77.21],
+  "Dubai":[25.20,55.27],"Kyoto":[35.01,135.77],"Osaka":[34.69,135.50],
+  "Bali":[-8.34,115.09],"Taipei":[25.05,121.55],"Kuala Lumpur":[3.14,101.69],
+  "Sydney":[-33.87,151.21],"Melbourne":[-37.81,144.96],"Auckland":[-36.86,174.77],
+  "Toronto":[43.65,-79.38],"Vancouver":[49.25,-123.12],"Montreal":[45.51,-73.56],
+  "Mexico City":[19.43,-99.13],"Buenos Aires":[-34.61,-58.38],"Sao Paulo":[-23.55,-46.63],
+  "Rio de Janeiro":[-22.91,-43.18],"Bogota":[4.71,-74.07],"Lima":[-12.05,-77.05],
+  "Santiago":[-33.45,-70.67],"Havana":[23.13,-82.38],
+  "Cairo":[30.04,31.24],"Cape Town":[-33.93,18.42],"Nairobi":[-1.29,36.82],
+  "Marrakech":[31.63,-8.01],"Johannesburg":[-26.20,28.04],"Lagos":[6.52,3.38],
+  "Antwerp":[51.22,4.40],"Larnaca":[34.92,33.62],"Miliou":[34.93,32.48],
+  "Luxembourg City":[49.61,6.13],"Frankfurt":[50.11,8.68],
+  "Lake Balaton":[46.83,17.73],"Kaposújlak":[46.40,17.68],"Kalocsa":[46.53,18.98],
+  "Valletta":[35.90,14.51],"Sliema":[35.91,14.50],"Marsaskala":[35.86,14.56],"Gozo":[36.05,14.24],
+  "Milan":[45.46,9.19],"Bergamo":[45.70,9.67],"Cagliari":[39.22,9.11],
+  "Bressanone":[46.72,11.65],"Ortisei":[46.58,11.67],"Feldthurns":[46.63,11.58],
+  "Kyiv":[50.45,30.52],"Tel Aviv":[32.09,34.79],"Eilat":[29.56,34.95],
+  "Jerusalem":[31.77,35.22],"Ofra":[31.94,35.25],"Natur":[33.00,35.75],
+  "Liwa Desert":[23.12,53.75],"Bangalore":[12.97,77.59],"Almaty":[43.24,76.89],
+  "Phú Quốc":[10.29,103.98],"New York City":[40.71,-74.01],
+  "Liège":[50.64,5.57],"Porto":[41.16,-8.63],"Portimão":[37.14,-8.54],
+  "Oshkosh":[44.02,-88.54],"St. Louis":[38.63,-90.20],
+  "Mt. Sterling":[38.06,-83.94],"Riverside":[33.98,-117.37],"Camarillo":[34.22,-119.04],
+  "Bratislava":[48.15,17.11],"Kraków":[50.06,19.94],"Katowice":[50.26,19.02],
+  "Poznań":[52.41,16.93],"Wrocław":[51.11,17.04],"Łódź":[51.76,19.46],"Gdańsk":[54.35,18.65],
+  "Casablanca":[33.59,-7.62],"Marrakech":[31.63,-8.01],
+  "Hanoi":[21.03,105.85],
+  "Phuket":[7.88,98.39],"Phi Phi Islands":[7.74,98.78],"Patong":[7.90,98.30],"Shenzhen":[22.54,114.06],
+  "Amsterdam":[52.37,4.90],"The Hague":[52.08,4.31],
+  "Niagara Falls":[43.10,-79.07],
+  "Keflavík":[63.98,-22.56],
+  "London":[51.51,-0.13],"York":[53.96,-1.08],"Leeds":[53.80,-1.55],
+  "Poprad":[49.06,20.30],"Liptovský Mikuláš":[49.08,19.62],
+  "Zakopane":[49.30,19.95],
+  "Córdoba":[37.88,-4.78],"Zaragoza":[41.65,-0.88],
+  "Las Vegas":[36.17,-115.14],"Santa Monica":[34.02,-118.49],
+  "Niagara Falls":[43.09,-79.08],
+  "Keflavík":[64.00,-22.56],
+  "London":[51.51,-0.13],"York":[53.96,-1.08],"Leeds":[53.80,-1.55],
+  "Poprad":[49.06,20.30],"Liptovský Mikuláš":[49.08,19.62],
+  "Zakopane":[49.30,19.95],
+  "Bucharest":[44.43,26.10],"Bran":[45.51,25.37],"Sinaia":[45.35,25.55],
+  "Naples":[40.85,14.27],"Amalfi":[40.63,14.60],"Rome":[41.90,12.50],
+  "Catania":[37.50,15.09],"Bari":[41.12,16.87],
+  "San Gimignano":[43.47,11.04],"Siena":[43.32,11.33],
+  "Baku":[40.41,49.87],
+  "Megara":[37.99,23.34],"Kos":[36.89,27.29],"Rhodes":[36.44,28.22],
+  "Prague":[50.08,14.44],"Brno":[49.20,16.61],"Ostrava":[49.84,18.29],
+  "Plzeň":[49.74,13.38],"Karlovy Vary":[50.23,12.87],
+  "Prague":[50.08,14.44],"Brno":[49.19,16.61],"Ostrava":[49.83,18.29],
+  "Plzeň":[49.74,13.38],"Karlovy Vary":[50.23,12.87],
+  "Podgorica":[42.44,19.26],"Split":[43.51,16.44],
+  "Ljubljana":[46.05,14.51],"Belgrade":[44.82,20.46],"Niš":[43.32,21.90],
+  "Podgorica":[42.44,19.26],"Split":[43.51,16.44],
+  "Ljubljana":[46.05,14.51],"Belgrade":[44.80,20.46],"Niš":[43.32,21.90],
+  "Vaduz":[47.14,9.52],
+  "Podgorica":[42.44,19.26],
+  "Split":[43.51,16.44],"Ljubljana":[46.05,14.51],
+  "Belgrade":[44.82,20.46],"Niš":[43.32,21.90],
+  "Skopje":[41.99,21.43],
+  "Athens":[37.98,23.73],"Ioannina":[39.66,20.85],
+  "Meteora":[39.72,21.63],"Syros":[37.44,24.94],"Corfu":[39.62,19.92],
+  "Nice":[43.71,7.26],
+  "Garda":[45.57,10.71],"Florence":[43.77,11.25],
+  "Venice":[45.44,12.32],"Olbia":[40.92,9.50],
+  "Bern":[46.95,7.45],"Lausanne":[46.52,6.63],"Geneva":[46.20,6.15],
+  "Zurich":[47.38,8.54],"Sion":[46.23,7.36],
+  "Lauterbrunnen":[46.59,7.91],"Grindelwald":[46.62,8.04],
+  "Podgorica":[42.44,19.26],"Split":[43.51,16.44],"Ljubljana":[46.05,14.51],
+  "Belgrade":[44.82,20.46],"Niš":[43.32,21.90],"Skopje":[42.00,21.43],
+  "Athens":[37.98,23.73],"Ioánnina":[39.66,20.85],"Meteora":[39.72,21.63],
+  "Syros":[37.45,24.93],"Corfu":[39.62,19.92],
+  "Nice":[43.71,7.26],
+  "Garda":[45.57,10.72],"Florence":[43.77,11.25],"Venice":[45.44,12.33],"Olbia":[40.92,9.50],
+  "Moscow":[55.75,37.62],"St. Petersburg":[59.95,30.32],
+  "Graz":[47.07,15.44],"Salzburg":[47.80,13.04],
+  "Berlin":[52.52,13.41],"Munich":[48.14,11.58],
+  "Düsseldorf":[51.23,6.78],"Neuss":[51.20,6.69],
+  "Vienna":[48.21,16.37],"Bratislava":[48.15,17.11],
+  "Kraków":[50.06,19.94],"Katowice":[50.26,19.02],
+  "Poznań":[52.41,16.93],"Wrocław":[51.11,17.04],
+  "Łódź":[51.76,19.46],"Gdańsk":[54.35,18.65],
+  "Liège":[50.64,5.57],"Porto":[41.16,-8.63],"Portimão":[37.14,-8.54],
+  "Oshkosh":[44.02,-88.54],"St. Louis":[38.63,-90.20],
+  "Mt. Sterling":[38.06,-83.94],"Riverside":[33.98,-117.37],"Camarillo":[34.22,-119.04],
+};
+
+function findCoords(city) {
+  const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const nc = norm(city);
+  for (const [k,v] of Object.entries(COORDS)) {
+    if (norm(k) === nc) return v;
+  }
+  return null;
+}
+
+// ── PERSISTENT STORAGE ───────────────────────────────────────────────────────
+const STORAGE_KEY = 'travel_map_visits_v1';
+const DEFAULT_VISITS = {
+  // ── Europe ────────────────────────────────────────────────────────────────
+  "Belgium":       ["Antwerp","Brussels","Liège"],
+  "Cyprus":        ["Larnaca","Miliou"],
+  "Luxembourg":    ["Luxembourg City"],
+  "Germany":       ["Frankfurt","Berlin","Munich","Düsseldorf","Neuss"],
+  "Hungary":       ["Budapest","Lake Balaton","Kaposújlak","Kalocsa"],
+  "Malta":         ["Valletta","Sliema","Marsaskala","Gozo"],
+  "France":        ["Nice"],
+  "Italy":         ["Milan","Bergamo","Cagliari","Bressanone","Ortisei","Feldthurns","Garda","Florence","Venice","Olbia","Naples","Amalfi","Rome","Catania","Bari","San Gimignano","Siena"],
+  "Portugal":      ["Lisbon","Porto","Portimão"],
+  "Ukraine":       ["Kyiv"],
+  "Canada":        ["Niagara Falls"],
+  "Iceland":       ["Keflavík"],
+  "Norway":        ["Oslo"],
+  "Egypt":         ["Cairo"],
+  "United Kingdom":["London","York","Leeds"],
+  "Netherlands":   ["Amsterdam","The Hague"],
+  "Liechtenstein": ["Vaduz"],
+  "Montenegro":    ["Podgorica"],
+  "Croatia":       ["Split"],
+  "Slovenia":      ["Ljubljana"],
+  "Serbia":        ["Belgrade","Niš"],
+  "Montenegro":    ["Podgorica"],
+  "Croatia":       ["Split"],
+  "Slovenia":      ["Ljubljana"],
+  "Serbia":        ["Belgrade","Niš"],
+  "North Macedonia":["Skopje"],
+  "Montenegro":    ["Podgorica"],
+  "Croatia":       ["Split"],
+  "Slovenia":      ["Ljubljana"],
+  "Serbia":        ["Belgrade","Niš"],
+  "North Macedonia":["Skopje"],
+  "Greece":        ["Athens","Ioánnina","Meteora","Syros","Corfu","Megara","Kos","Rhodes"],
+  "Czech Republic":["Prague","Brno","Ostrava","Plzeň","Karlovy Vary"],
+  "Romania":       ["Bucharest","Bran","Sinaia"],
+  "Azerbaijan":    ["Baku"],
+  "Czech Republic":["Prague","Brno","Ostrava","Plzeň","Karlovy Vary"],
+  "Slovakia":      ["Bratislava","Poprad","Liptovský Mikuláš"],
+  "Montenegro":    ["Podgorica"],
+  "Croatia":       ["Split"],
+  "Slovenia":      ["Ljubljana"],
+  "Serbia":        ["Belgrade","Niš"],
+  "Austria":       ["Vienna","Graz","Salzburg"],
+  "Switzerland":   ["Bern","Lausanne","Geneva","Zurich","Sion","Lauterbrunnen","Grindelwald"],
+  "Greece":        ["Athens","Ioannina","Meteora","Syros","Corfu"],
+  "Spain":         ["Madrid","Barcelona","Córdoba","Zaragoza"],
+  "Poland":        ["Warsaw","Kraków","Katowice","Poznań","Wrocław","Łódź","Gdańsk","Zakopane"],
+  "France":        ["Nice"],
+  // ── Middle East ───────────────────────────────────────────────────────────
+  "Israel":        ["Tel Aviv","Eilat","Jerusalem","Ofra","Natur"],
+  "UAE":           ["Dubai","Liwa Desert"],
+  // ── Asia ──────────────────────────────────────────────────────────────────
+  "Hong Kong":     ["Hong Kong"],
+  "India":         ["Mumbai","Delhi","Bangalore"],
+  "Kazakhstan":    ["Almaty"],
+  "Vietnam":       ["Phú Quốc","Hanoi"],
+  "Thailand":      ["Phuket","Phi Phi Islands","Patong"],
+  "China":         ["Shenzhen"],
+  "Russia":        ["Moscow","St. Petersburg"],
+  "Canada":        ["Niagara Falls"],
+  "Iceland":       ["Keflavík"],
+  "United Kingdom":["London","York","Leeds"],
+  // ── Americas ──────────────────────────────────────────────────────────────
+  "United States": ["New York City","Washington DC","Boston","Oshkosh","St. Louis","Mt. Sterling","Riverside","Camarillo","Las Vegas","Santa Monica"],
+  // ── Africa ────────────────────────────────────────────────────────────────
+  "Kenya":         ["Nairobi"],
+};
+
+// ⚠️  IMPORTANT: if you added cities through the UI that are missing here,
+// use the ⬆ Import button to restore from a backup, or re-add them manually.
+// The app will always load localStorage first — these defaults are only the
+// starting point when no localStorage data exists.
+
+// Transit-only cities (airport stops) — shown with green pins
+const DEFAULT_TRANSIT = {
+  "Kenya":  ["Nairobi"],
+  "Norway": ["Oslo"],
+  "Egypt":  ["Cairo"],
+};
+
+const TRANSIT_KEY = 'travel_map_transit_v1';
+
+function saveTransit() {
+  try { localStorage.setItem(TRANSIT_KEY, JSON.stringify(transit)); } catch(e) {}
+}
+
+function loadTransit() {
+  try {
+    const saved = localStorage.getItem(TRANSIT_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+        const merged = JSON.parse(JSON.stringify(parsed));
+        Object.entries(DEFAULT_TRANSIT).forEach(([country, cities]) => {
+          if (!merged[country]) merged[country] = [];
+          cities.forEach(city => { if (!merged[country].includes(city)) merged[country].push(city); });
+        });
+        return merged;
+      }
+    }
+  } catch(e) {}
+  return JSON.parse(JSON.stringify(DEFAULT_TRANSIT));
+}
+
+let transit = loadTransit();
+
+function isTransit(city) {
+  return Object.values(transit).some(cities => cities.includes(city));
+}
+
+function saveVisits() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(visits)); } catch(e) {}
+}
+
+function loadVisits() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+        // localStorage is the source of truth — it contains everything the user has added.
+        // Also ensure any DEFAULT_VISITS cities are included in case they were never saved before.
+        const merged = JSON.parse(JSON.stringify(parsed)); // deep copy
+        Object.entries(DEFAULT_VISITS).forEach(([country, cities]) => {
+          if (!merged[country]) merged[country] = [];
+          cities.forEach(city => {
+            if (!merged[country].includes(city)) merged[country].push(city);
+          });
+        });
+        return merged;
+      }
+    }
+  } catch(e) {}
+  // Nothing saved yet — use defaults
+  return JSON.parse(JSON.stringify(DEFAULT_VISITS));
+}
+
+let visits = loadVisits();
+
+const CCITIES={
+  "Australia":["Sydney","Melbourne","Brisbane","Perth","Adelaide","Gold Coast","Cairns","Darwin","Canberra"],
+  "Austria":["Vienna","Salzburg","Innsbruck","Graz","Linz"],
+  "Belgium":["Brussels","Antwerp","Ghent","Bruges","Liège","Leuven","Namur"],
+  "Canada":["Toronto","Montreal","Vancouver","Calgary","Ottawa","Edmonton","Quebec City","Halifax","Winnipeg"],
+  "China":["Beijing","Shanghai","Shenzhen","Guangzhou","Chengdu","Xi'an","Hangzhou","Chongqing","Wuhan","Nanjing"],
+  "Croatia":["Zagreb","Split","Dubrovnik","Pula","Hvar","Zadar"],
+  "Cyprus":["Nicosia","Limassol","Larnaca","Paphos","Miliou","Protaras","Ayia Napa"],
+  "Czech Republic":["Prague","Brno","Ostrava","Plzeň","Olomouc","Karlovy Vary"],
+  "Denmark":["Copenhagen","Aarhus","Odense","Aalborg"],
+  "Egypt":["Cairo","Alexandria","Luxor","Aswan","Hurghada","Sharm el-Sheikh"],
+  "France":["Paris","Nice","Marseille","Lyon","Bordeaux","Toulouse","Strasbourg","Lille","Cannes","Avignon"],
+  "Germany":["Berlin","Munich","Hamburg","Frankfurt","Cologne","Stuttgart","Düsseldorf","Dresden","Heidelberg","Nuremberg"],
+  "Greece":["Athens","Thessaloniki","Santorini","Mykonos","Heraklion","Rhodes","Corfu"],
+  "Hungary":["Budapest","Debrecen","Pécs","Győr","Lake Balaton","Eger","Sopron","Kalocsa","Kaposújlak"],
+  "India":["Mumbai","Delhi","Bangalore","Kolkata","Chennai","Hyderabad","Jaipur","Agra","Varanasi","Goa","Amritsar","Kochi"],
+  "Indonesia":["Jakarta","Bali","Yogyakarta","Surabaya","Lombok"],
+  "Ireland":["Dublin","Cork","Galway","Limerick","Killarney"],
+  "Israel":["Tel Aviv","Jerusalem","Haifa","Eilat","Nazareth","Ofra","Natur","Tiberias","Acre"],
+  "Italy":["Rome","Milan","Florence","Venice","Naples","Bologna","Turin","Palermo","Verona","Bergamo","Cagliari","Siena","Pisa","Bressanone","Ortisei"],
+  "Japan":["Tokyo","Kyoto","Osaka","Hiroshima","Nara","Fukuoka","Sapporo","Nagoya","Kanazawa","Hakone"],
+  "Jordan":["Amman","Petra","Wadi Rum","Aqaba","Jerash"],
+  "Kazakhstan":["Almaty","Nur-Sultan","Shymkent"],
+  "Kenya":["Nairobi","Mombasa","Kisumu","Diani Beach","Masai Mara"],
+  "Luxembourg":["Luxembourg City","Echternach","Vianden"],
+  "Malaysia":["Kuala Lumpur","Penang","Langkawi","Kota Kinabalu"],
+  "Malta":["Valletta","Sliema","Marsaxlokk","Marsaskala","Mdina","St. Julian's","Gozo","Comino"],
+  "Mexico":["Mexico City","Cancún","Guadalajara","Monterrey","Oaxaca","Tulum","Merida"],
+  "Morocco":["Casablanca","Marrakech","Fes","Rabat","Chefchaouen","Tangier"],
+  "Netherlands":["Amsterdam","Rotterdam","The Hague","Utrecht","Delft","Haarlem","Maastricht"],
+  "New Zealand":["Auckland","Wellington","Christchurch","Queenstown","Rotorua"],
+  "Norway":["Oslo","Bergen","Tromsø","Stavanger","Ålesund","Flåm"],
+  "Poland":["Warsaw","Kraków","Gdańsk","Wrocław","Poznań","Zakopane","Katowice","Łódź"],
+  "Portugal":["Lisbon","Porto","Algarve","Sintra","Évora","Faro","Portimão","Coimbra"],
+  "Romania":["Bucharest","Cluj-Napoca","Brașov","Sibiu","Timișoara"],
+  "Russia":["Moscow","Saint Petersburg","Novosibirsk","Kazan","Sochi"],
+  "Saudi Arabia":["Riyadh","Jeddah","Mecca","Medina","AlUla"],
+  "Slovakia":["Bratislava","Košice","Banská Bystrica"],
+  "Slovenia":["Ljubljana","Bled","Piran","Maribor"],
+  "South Africa":["Cape Town","Johannesburg","Durban","Pretoria","Stellenbosch"],
+  "South Korea":["Seoul","Busan","Jeju","Incheon","Gyeongju"],
+  "Spain":["Madrid","Barcelona","Seville","Valencia","Granada","Bilbao","San Sebastián","Málaga","Toledo","Ibiza"],
+  "Sweden":["Stockholm","Gothenburg","Malmö","Uppsala","Kiruna"],
+  "Switzerland":["Zurich","Geneva","Bern","Basel","Lucerne","Interlaken","Zermatt","Lausanne"],
+  "Thailand":["Bangkok","Chiang Mai","Phuket","Koh Samui","Krabi","Ayutthaya"],
+  "Turkey":["Istanbul","Ankara","Antalya","Cappadocia","Izmir","Bodrum","Pamukkale"],
+  "UAE":["Dubai","Abu Dhabi","Sharjah","Liwa Desert","Fujairah"],
+  "Ukraine":["Kyiv","Lviv","Odessa","Kharkiv","Chernivtsi"],
+  "United Kingdom":["London","Edinburgh","Manchester","Liverpool","Birmingham","Bristol","Bath","Oxford","Cambridge","York","Glasgow"],
+  "United States":["New York City","Los Angeles","Chicago","San Francisco","Miami","Las Vegas","Seattle","Boston","Washington DC","Houston","New Orleans","Nashville","Austin","Denver","Atlanta","Dallas","Oshkosh","St. Louis","Mt. Sterling","Riverside","Camarillo"],
+  "Uzbekistan":["Tashkent","Samarkand","Bukhara","Khiva"],
+  "Vietnam":["Hanoi","Ho Chi Minh City","Hội An","Da Nang","Hạ Long Bay","Phú Quốc","Nha Trang","Hue","Sapa"],
+  "Zimbabwe":["Harare","Bulawayo","Victoria Falls"],
+};
+
+const ALLC=[
+  {n:"Afghanistan",f:"🇦🇫"},{n:"Albania",f:"🇦🇱"},{n:"Algeria",f:"🇩🇿"},{n:"Angola",f:"🇦🇴"},
+  {n:"Argentina",f:"🇦🇷"},{n:"Armenia",f:"🇦🇲"},{n:"Australia",f:"🇦🇺"},{n:"Austria",f:"🇦🇹"},
+  {n:"Azerbaijan",f:"🇦🇿"},{n:"Bangladesh",f:"🇧🇩"},{n:"Belarus",f:"🇧🇾"},{n:"Belgium",f:"🇧🇪"},
+  {n:"Bolivia",f:"🇧🇴"},{n:"Brazil",f:"🇧🇷"},{n:"Bulgaria",f:"🇧🇬"},{n:"Cambodia",f:"🇰🇭"},
+  {n:"Cameroon",f:"🇨🇲"},{n:"Canada",f:"🇨🇦"},{n:"Chile",f:"🇨🇱"},{n:"China",f:"🇨🇳"},
+  {n:"Colombia",f:"🇨🇴"},{n:"Costa Rica",f:"🇨🇷"},{n:"Croatia",f:"🇭🇷"},{n:"Cuba",f:"🇨🇺"},
+  {n:"Cyprus",f:"🇨🇾"},{n:"Czech Republic",f:"🇨🇿"},{n:"Denmark",f:"🇩🇰"},{n:"DR Congo",f:"🇨🇩"},
+  {n:"Ecuador",f:"🇪🇨"},{n:"Egypt",f:"🇪🇬"},{n:"El Salvador",f:"🇸🇻"},{n:"Estonia",f:"🇪🇪"},
+  {n:"Ethiopia",f:"🇪🇹"},{n:"Finland",f:"🇫🇮"},{n:"France",f:"🇫🇷"},{n:"Georgia",f:"🇬🇪"},
+  {n:"Germany",f:"🇩🇪"},{n:"Ghana",f:"🇬🇭"},{n:"Greece",f:"🇬🇷"},{n:"Guatemala",f:"🇬🇹"},
+  {n:"Haiti",f:"🇭🇹"},{n:"Honduras",f:"🇭🇳"},{n:"Hong Kong",f:"🇭🇰"},{n:"Hungary",f:"🇭🇺"},
+  {n:"Iceland",f:"🇮🇸"},{n:"India",f:"🇮🇳"},{n:"Indonesia",f:"🇮🇩"},{n:"Iran",f:"🇮🇷"},
+  {n:"Iraq",f:"🇮🇶"},{n:"Ireland",f:"🇮🇪"},{n:"Israel",f:"🇮🇱"},{n:"Italy",f:"🇮🇹"},
+  {n:"Jamaica",f:"🇯🇲"},{n:"Japan",f:"🇯🇵"},{n:"Jordan",f:"🇯🇴"},{n:"Kazakhstan",f:"🇰🇿"},
+  {n:"Kenya",f:"🇰🇪"},{n:"Kuwait",f:"🇰🇼"},{n:"Latvia",f:"🇱🇻"},{n:"Lebanon",f:"🇱🇧"},
+  {n:"Libya",f:"🇱🇾"},{n:"Lithuania",f:"🇱🇹"},{n:"Luxembourg",f:"🇱🇺"},{n:"Madagascar",f:"🇲🇬"},
+  {n:"Malaysia",f:"🇲🇾"},{n:"Mali",f:"🇲🇱"},{n:"Malta",f:"🇲🇹"},{n:"Mexico",f:"🇲🇽"},
+  {n:"Moldova",f:"🇲🇩"},{n:"Mongolia",f:"🇲🇳"},{n:"Montenegro",f:"🇲🇪"},{n:"Morocco",f:"🇲🇦"},
+  {n:"Mozambique",f:"🇲🇿"},{n:"Myanmar",f:"🇲🇲"},{n:"Nepal",f:"🇳🇵"},{n:"Netherlands",f:"🇳🇱"},
+  {n:"New Zealand",f:"🇳🇿"},{n:"Nicaragua",f:"🇳🇮"},{n:"Niger",f:"🇳🇪"},{n:"Nigeria",f:"🇳🇬"},
+  {n:"North Macedonia",f:"🇲🇰"},{n:"Norway",f:"🇳🇴"},{n:"Oman",f:"🇴🇲"},{n:"Pakistan",f:"🇵🇰"},
+  {n:"Panama",f:"🇵🇦"},{n:"Paraguay",f:"🇵🇾"},{n:"Peru",f:"🇵🇪"},{n:"Philippines",f:"🇵🇭"},
+  {n:"Poland",f:"🇵🇱"},{n:"Portugal",f:"🇵🇹"},{n:"Qatar",f:"🇶🇦"},{n:"Romania",f:"🇷🇴"},
+  {n:"Russia",f:"🇷🇺"},{n:"Saudi Arabia",f:"🇸🇦"},{n:"Senegal",f:"🇸🇳"},{n:"Serbia",f:"🇷🇸"},
+  {n:"Singapore",f:"🇸🇬"},{n:"Slovakia",f:"🇸🇰"},{n:"Slovenia",f:"🇸🇮"},{n:"Somalia",f:"🇸🇴"},
+  {n:"South Africa",f:"🇿🇦"},{n:"South Korea",f:"🇰🇷"},{n:"Spain",f:"🇪🇸"},{n:"Sri Lanka",f:"🇱🇰"},
+  {n:"Sudan",f:"🇸🇩"},{n:"Sweden",f:"🇸🇪"},{n:"Switzerland",f:"🇨🇭"},{n:"Syria",f:"🇸🇾"},
+  {n:"Taiwan",f:"🇹🇼"},{n:"Tanzania",f:"🇹🇿"},{n:"Thailand",f:"🇹🇭"},{n:"Tunisia",f:"🇹🇳"},
+  {n:"Turkey",f:"🇹🇷"},{n:"UAE",f:"🇦🇪"},{n:"Uganda",f:"🇺🇬"},{n:"Ukraine",f:"🇺🇦"},
+  {n:"United Kingdom",f:"🇬🇧"},{n:"United States",f:"🇺🇸"},{n:"Uruguay",f:"🇺🇾"},
+  {n:"Uzbekistan",f:"🇺🇿"},{n:"Venezuela",f:"🇻🇪"},{n:"Vietnam",f:"🇻🇳"},
+  {n:"Yemen",f:"🇾🇪"},{n:"Zambia",f:"🇿🇲"},{n:"Zimbabwe",f:"🇿🇼"},
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COLOR TIERS  0=unvisited 1=1-2 2=3-4 3=5-7 4=8-10 5=11+
+// ─────────────────────────────────────────────────────────────────────────────
+function tierColor(n) {
+  if (n === 0)  return 'rgba(30,60,90,0.45)';
+  if (n <= 2)   return 'rgba(26,100,180,0.60)';
+  if (n <= 4)   return 'rgba(26,140,210,0.65)';
+  if (n <= 7)   return 'rgba(26,180,230,0.70)';
+  if (n <= 10)  return 'rgba(80,210,255,0.75)';
+  return             'rgba(140,235,255,0.80)';
+}
+function visitColor(country) {
+  return tierColor((visits[country] || []).length);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LEAFLET MAP
+// ─────────────────────────────────────────────────────────────────────────────
+const map = L.map('map', {
+  center: [30, 15],
+  zoom: 3,
+  minZoom: 2,
+  maxZoom: 22,
+  zoomControl: true,
+  maxBounds: [[-90, -180], [90, 180]],
+  maxBoundsViscosity: 1.0,
+}).setView([30, 15], 3);
+
+// Tile layers
+const satellite = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  { attribution: '© Esri, Maxar, Earthstar Geographics', maxZoom: 22, maxNativeZoom: 19, noWrap: true }
+);
+const streets = L.tileLayer(
+  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  { attribution: '© OpenStreetMap © CARTO', maxZoom: 22, maxNativeZoom: 19, noWrap: true }
+);
+
+satellite.addTo(map);
+let currentLayer = 'satellite';
+
+function toggleLayer() {
+  const btn = document.getElementById('layer-btn');
+  if (currentLayer === 'satellite') {
+    map.removeLayer(satellite);
+    streets.addTo(map);
+    currentLayer = 'streets';
+    btn.textContent = '🗺 Street map';
+  } else {
+    map.removeLayer(streets);
+    satellite.addTo(map);
+    currentLayer = 'satellite';
+    btn.textContent = '🛰 Satellite';
+  }
+}
+
+// Country shading layer via GeoJSON
+let countryLayer = null;
+
+async function loadCountries() {
+  let world;
+  try {
+    world = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json').then(r => r.json());
+  } catch(e) { console.warn('Could not load country outlines'); return; }
+
+  // Convert TopoJSON → GeoJSON using topojson-client loaded inline
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js';
+  script.onload = () => {
+    const geojson = topojson.feature(world, world.objects.countries);
+    // Build numeric id → country name map
+    const numMap = buildNumMap();
+
+    countryLayer = L.geoJSON(geojson, {
+      style: feature => {
+        const name = numMap[+feature.id];
+        const n = name ? (visits[name] || []).length : 0;
+        return {
+          fillColor: visitColorHex(n),
+          fillOpacity: n === 0 ? 0.35 : 0.65,
+          color: '#3a6080',
+          weight: 0.8,
+          opacity: 0.8,
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        const name = numMap[+feature.id];
+        if (!name) return;
+        const n = (visits[name] || []).length;
+        layer.bindTooltip(
+          `<strong>${name}</strong><br><span>${n ? n + ' cit' + (n > 1 ? 'ies' : 'y') + ' visited' : 'Not visited'}</span>`,
+          { sticky: true, className: 'country-tooltip', direction: 'top', offset: [0, -4] }
+        );
+      }
+    }).addTo(map);
+  };
+  document.head.appendChild(script);
+}
+
+function visitColorHex(n) {
+  if (n === 0)  return '#1e3c5a';
+  if (n <= 2)   return '#1a64b4';
+  if (n <= 4)   return '#1a8cd2';
+  if (n <= 7)   return '#1ab4e6';
+  if (n <= 10)  return '#50d2ff';
+  return             '#8cebff';
+}
+
+function updateCountryColors() {
+  if (!countryLayer) return;
+  const numMap = buildNumMap();
+  countryLayer.setStyle(feature => {
+    const name = numMap[+feature.id];
+    const n = name ? (visits[name] || []).length : 0;
+    return {
+      fillColor: visitColorHex(n),
+      fillOpacity: n === 0 ? 0.35 : 0.65,
+      color: '#3a6080',
+      weight: 0.8,
+      opacity: 0.8,
+    };
+  });
+}
+
+// Custom pin icon
+function makeIcon(isTransitPin = false) {
+  if (isTransitPin) {
+    return L.divIcon({
+      className: '',
+      html: `<div style="
+        font-size:11px;line-height:1;color:#3dd68c;
+        text-shadow:0 0 5px rgba(61,214,140,0.9), 0 0 10px rgba(61,214,140,0.5);
+      ">✈</div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+      popupAnchor: [0, -10],
+    });
+  }
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      width:12px;height:12px;border-radius:50%;
+      background:#f0a500;border:2px solid #0a0f1a;
+      box-shadow:0 0 6px rgba(240,165,0,0.7), 0 0 0 4px rgba(240,165,0,0.15);
+    "></div>`,
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
+    popupAnchor: [0, -10],
+  });
+}
+
+// Pin markers
+let markers = [];
+
+function renderPins() {
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+  Object.entries(visits).forEach(([country, cities]) => {
+    cities.forEach(city => {
+      const c = findCoords(city);
+      if (!c) return;
+      const isT = isTransit(city);
+      const m = L.marker([c[0], c[1]], { icon: makeIcon(isT) })
+        .bindTooltip(city, {
+          permanent: false,
+          direction: 'top',
+          offset: [0, -10],
+          className: 'city-tooltip'
+        })
+        .bindPopup(`<strong>${city}</strong><span>${country}${isT ? ' · <span style="color:#3dd68c">transit only</span>' : ''}</span>`)
+        .addTo(map);
+      markers.push(m);
+    });
+  });
+}
+
+function flyToCity(city) {
+  const c = findCoords(city);
+  if (!c) return;
+  map.flyTo([c[0], c[1]], Math.max(map.getZoom(), 8), { duration: 1.2 });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SIDEBAR LIST
+// ─────────────────────────────────────────────────────────────────────────────
+function renderList() {
+  const el = document.getElementById('clist');
+  const ks = Object.keys(visits).sort();
+  if (!ks.length) { el.innerHTML = '<div class="empty"><span>🌍</span>Add your first city above!</div>'; return; }
+  el.innerHTML = ks.map(c => `
+    <div class="cg">
+      <div class="cgh"><span>${c}</span><span style="color:var(--muted);font-size:0.6rem">${visits[c].length}</span></div>
+      ${visits[c].map(ci => `
+        <div class="ci" onclick="flyToCity('${esc(ci)}')">
+          <div class="cil"><div class="cdot${isTransit(ci) ? ' transit' : ''}"></div>${ci}${isTransit(ci) ? ' <span style="font-size:0.75rem;color:#3dd68c">✈</span>' : ''}</div>
+          <button class="delbtn" onclick="event.stopPropagation();del('${esc(ci)}','${esc(c)}')">✕</button>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+function esc(s) { return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+function updStats() {
+  document.getElementById('cnt-c').textContent = Object.keys(visits).length;
+  document.getElementById('cnt-ci').textContent = Object.values(visits).reduce((s,v) => s+v.length, 0);
+}
+
+function refresh() { updateCountryColors(); renderPins(); renderList(); updStats(); }
+
+function del(city, country) {
+  visits[country] = visits[country].filter(c => c !== city);
+  if (!visits[country].length) delete visits[country];
+  saveVisits();
+  refresh();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTOCOMPLETE
+// ─────────────────────────────────────────────────────────────────────────────
+let sel = null, ccur = -1, xcur = -1, xtimer = null;
+const CI = document.getElementById('cinput'), CD = document.getElementById('cdrop');
+const XI = document.getElementById('xinput'), XD = document.getElementById('xdrop');
+const CB = document.getElementById('cbadge'), AB = document.getElementById('addbtn');
+const CW = document.getElementById('cwrap'),  XW = document.getElementById('xwrap');
+
+function gflag(n) { const c = ALLC.find(x => x.n.toLowerCase() === n.toLowerCase()); return c ? c.f : '🌍'; }
+
+CI.addEventListener('input', () => {
+  const q = CI.value.trim().toLowerCase(); ccur = -1;
+  if (!q) { closeD(CD); return; }
+  const m = ALLC.filter(c => c.n.toLowerCase().startsWith(q))
+    .concat(ALLC.filter(c => !c.n.toLowerCase().startsWith(q) && c.n.toLowerCase().includes(q))).slice(0, 8);
+  if (!m.length) { closeD(CD); return; }
+  CD.innerHTML = m.map((c,i) =>
+    `<div class="acr" data-idx="${i}" data-name="${c.n}"
+      onmousedown="event.preventDefault();selC('${c.n.replace(/'/g,"\\'")}','${c.f}')">
+      <span>${c.f}</span>${c.n}</div>`).join('');
+  CD.classList.add('open');
+});
+CI.addEventListener('keydown', e => {
+  const rs = CD.querySelectorAll('.acr');
+  if (e.key==='ArrowDown') { e.preventDefault(); ccur=Math.min(ccur+1,rs.length-1); hl(rs,ccur); }
+  else if (e.key==='ArrowUp') { e.preventDefault(); ccur=Math.max(ccur-1,0); hl(rs,ccur); }
+  else if (e.key==='Enter') { e.preventDefault(); const r=rs[ccur]||(rs.length===1&&rs[0]); if(r)selC(r.dataset.name,gflag(r.dataset.name)); }
+  else if (e.key==='Escape') closeD(CD);
+});
+
+function selC(name, flag) {
+  sel = name; CW.style.display='none'; CB.classList.add('on');
+  document.getElementById('bflag').textContent = flag;
+  document.getElementById('bname').textContent = name;
+  XW.style.display='block'; XI.disabled=false; XI.focus(); AB.style.display='block';
+  document.getElementById('s1').className='step done';
+  document.getElementById('s2').className='step on';
+  closeD(CD);
+}
+function clearC() {
+  sel=null; CI.value=''; CW.style.display='block'; CB.classList.remove('on');
+  XW.style.display='none'; XI.disabled=true; XI.value=''; AB.style.display='none';
+  document.getElementById('s1').className='step on';
+  document.getElementById('s2').className='step';
+  closeD(CD); closeD(XD); CI.focus();
+}
+// City search – AI-powered with large built-in fallback
+let citySearchCache = {};
+let pendingSearch = null;   // AbortController for in-flight request
+
+function normStr(s) {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+}
+
+// Extended built-in cities covering every country in ALLC
+const EXTRA_CITIES = {
+  "Montenegro":["Podgorica","Budva","Kotor","Bar","Herceg Novi","Nikšić","Tivat","Ulcinj","Cetinje","Bijelo Polje"],
+  "Serbia":["Belgrade","Novi Sad","Niš","Kragujevac","Subotica","Zaječar","Čačak","Valjevo","Kruševac"],
+  "Albania":["Tirana","Durrës","Vlorë","Shkodër","Elbasan","Korçë","Fier","Berat","Lushnjë"],
+  "Bosnia and Herzegovina":["Sarajevo","Banja Luka","Tuzla","Mostar","Zenica","Brčko","Bijeljina","Trebinje"],
+  "North Macedonia":["Skopje","Ohrid","Bitola","Kumanovo","Tetovo","Štip","Strumica","Veles","Gostivar"],
+  "Kosovo":["Pristina","Prizren","Peja","Mitrovica","Gjakova","Gjilan","Ferizaj"],
+  "Moldova":["Chișinău","Tiraspol","Bălți","Bender","Cahul","Ungheni","Soroca"],
+  "Armenia":["Yerevan","Gyumri","Vanadzor","Vagharshapat","Hrazdan","Abovyan","Kapan"],
+  "Georgia":["Tbilisi","Batumi","Kutaisi","Rustavi","Zugdidi","Gori","Sokhumi","Poti","Mtskheta"],
+  "Azerbaijan":["Baku","Ganja","Sumqayit","Mingachevir","Nakhchivan","Shirvan","Lankaran"],
+  "Belarus":["Minsk","Grodno","Brest","Vitebsk","Mogilev","Gomel","Baranavichy","Pinsk"],
+  "Estonia":["Tallinn","Tartu","Narva","Pärnu","Kohtla-Järve","Viljandi","Rakvere"],
+  "Latvia":["Riga","Daugavpils","Liepāja","Jelgava","Jūrmala","Ventspils","Rēzekne"],
+  "Lithuania":["Vilnius","Kaunas","Klaipėda","Šiauliai","Panevėžys","Alytus","Marijampolė","Trakai"],
+  "Slovenia":["Ljubljana","Maribor","Celje","Kranj","Velenje","Koper","Novo Mesto","Bled","Piran"],
+  "Croatia":["Zagreb","Split","Rijeka","Osijek","Zadar","Pula","Slavonski Brod","Karlovac","Dubrovnik","Hvar"],
+  "Iceland":["Reykjavik","Akureyri","Ísafjörður","Selfoss","Keflavík","Hafnarfjörður","Vik","Húsavík"],
+  "Malta":["Valletta","Sliema","St. Julian's","Mdina","Marsaxlokk","Marsaskala","Gozo","Victoria","Rabat","Mellieħa","Bugibba"],
+  "Cyprus":["Nicosia","Limassol","Larnaca","Paphos","Famagusta","Kyrenia","Miliou","Protaras","Ayia Napa"],
+  "Luxembourg":["Luxembourg City","Esch-sur-Alzette","Differdange","Dudelange","Ettelbruck","Diekirch","Vianden","Echternach"],
+  "United Kingdom":["London","Manchester","Birmingham","Leeds","Liverpool","Sheffield","Bristol","Edinburgh","Glasgow","Cardiff","Belfast","Newcastle","Nottingham","Southampton","Oxford","Cambridge","Brighton","Bath","York","Leicester","Coventry","Bradford","Stoke-on-Trent","Wolverhampton","Plymouth","Derby","Reading","Kingston upon Hull","Preston","Aberdeen","Dundee","Inverness","Swansea","Portsmouth","Bournemouth","Norwich","Exeter"],
+  "Ireland":["Dublin","Cork","Limerick","Galway","Waterford","Drogheda","Dundalk","Kilkenny","Wexford","Sligo","Clonmel","Athlone","Tralee","Killarney"],
+  "Netherlands":["Amsterdam","Rotterdam","The Hague","Utrecht","Eindhoven","Tilburg","Groningen","Almere","Breda","Nijmegen","Enschede","Haarlem","Arnhem","Zaandam","Amersfoort","Delft","Dordrecht","Leiden","Maastricht"],
+  "Belgium":["Brussels","Antwerp","Ghent","Bruges","Liège","Namur","Leuven","Mons","Aalst","Mechelen","La Louvière","Kortrijk","Hasselt","Sint-Niklaas","Ostend","Genk","Leuven"],
+  "Switzerland":["Zurich","Geneva","Basel","Bern","Lausanne","Winterthur","Lucerne","St. Gallen","Lugano","Biel","Zermatt","Interlaken","Montreux","Davos","St. Moritz"],
+  "Austria":["Vienna","Graz","Linz","Salzburg","Innsbruck","Klagenfurt","Villach","Wels","Sankt Pölten","Dornbirn","Bregenz","Hallstatt"],
+  "Czech Republic":["Prague","Brno","Ostrava","Plzeň","Liberec","Olomouc","Ústí nad Labem","České Budějovice","Hradec Králové","Pardubice","Zlín","Karlovy Vary","Český Krumlov"],
+  "Slovakia":["Bratislava","Košice","Prešov","Žilina","Nitra","Banská Bystrica","Trnava","Martin","Trenčín","Poprad"],
+  "Hungary":["Budapest","Debrecen","Miskolc","Szeged","Pécs","Győr","Nyíregyháza","Kecskemét","Székesfehérvár","Veszprém","Lake Balaton","Eger","Sopron","Kalocsa","Kaposújlak"],
+  "Poland":["Warsaw","Kraków","Łódź","Wrocław","Poznań","Gdańsk","Szczecin","Bydgoszcz","Lublin","Katowice","Białystok","Gdynia","Częstochowa","Radom","Sosnowiec","Toruń","Kielce","Rzeszów","Zabrze","Olsztyn","Zakopane","Sopot"],
+  "Romania":["Bucharest","Cluj-Napoca","Timișoara","Iași","Constanța","Craiova","Brașov","Galați","Ploiești","Oradea","Brăila","Arad","Pitești","Sibiu","Bacău","Târgu Mureș","Sinaia"],
+  "Bulgaria":["Sofia","Plovdiv","Varna","Burgas","Ruse","Stara Zagora","Pleven","Sliven","Dobrich","Shumen","Veliko Tarnovo","Nessebar","Bansko"],
+  "Greece":["Athens","Thessaloniki","Patras","Piraeus","Heraklion","Larissa","Volos","Rhodes","Ioannina","Corfu","Santorini","Mykonos","Chania","Nafplio","Delphi"],
+  "Turkey":["Istanbul","Ankara","Izmir","Bursa","Adana","Gaziantep","Konya","Antalya","Kayseri","Mersin","Trabzon","Bodrum","Cappadocia","Pamukkale","Ephesus","Alanya"],
+  "Russia":["Moscow","Saint Petersburg","Novosibirsk","Yekaterinburg","Kazan","Chelyabinsk","Omsk","Ufa","Rostov-on-Don","Volgograd","Perm","Krasnoyarsk","Vladivostok","Sochi","Irkutsk","Kaliningrad","Nizhny Novgorod"],
+  "Ukraine":["Kyiv","Kharkiv","Odessa","Dnipro","Donetsk","Zaporizhzhia","Lviv","Kryvyi Rih","Mykolaiv","Mariupol","Chernivtsi","Poltava","Kherson","Zhytomyr","Sumy"],
+  "Israel":["Tel Aviv","Jerusalem","Haifa","Rishon LeZion","Petah Tikva","Ashdod","Netanya","Beer Sheva","Bnei Brak","Holon","Eilat","Nazareth","Tiberias","Acre","Herzliya","Caesarea","Natur","Ofra","Safed"],
+  "Jordan":["Amman","Zarqa","Irbid","Aqaba","Madaba","Petra","Jerash","Ajloun","Karak","Ma'an","Wadi Rum"],
+  "Lebanon":["Beirut","Tripoli","Sidon","Tyre","Jounieh","Baalbek","Zahle","Byblos","Bcharre"],
+  "Syria":["Damascus","Aleppo","Homs","Latakia","Deir ez-Zor","Hama","Raqqa","Qamishli","Tartus"],
+  "Iraq":["Baghdad","Basra","Mosul","Erbil","Najaf","Karbala","Sulaymaniyah","Kirkuk","Nasiriyah"],
+  "Iran":["Tehran","Mashhad","Isfahan","Tabriz","Karaj","Shiraz","Qom","Ahvaz","Kermanshah","Urmia","Yazd"],
+  "Saudi Arabia":["Riyadh","Jeddah","Mecca","Medina","Dammam","Taif","Tabuk","Al Khobar","AlUla","Neom","Abha"],
+  "UAE":["Dubai","Abu Dhabi","Sharjah","Al Ain","Ajman","Ras al-Khaimah","Fujairah","Umm al-Quwain","Liwa Desert"],
+  "Qatar":["Doha","Al Wakrah","Al Khor","Lusail","Mesaieed"],
+  "Kuwait":["Kuwait City","Hawalli","Salmiya","Farwaniya","Jahra"],
+  "Oman":["Muscat","Salalah","Sohar","Nizwa","Sur","Khasab","Rustaq","Wahiba Sands"],
+  "Yemen":["Sana'a","Aden","Taiz","Hodeidah","Ibb","Socotra"],
+  "Bahrain":["Manama","Riffa","Muharraq","Hamad Town","Isa Town"],
+  "Kazakhstan":["Almaty","Nur-Sultan","Shymkent","Karaganda","Aktobe","Taraz","Oskemen","Semey","Pavlodar","Aktau"],
+  "Uzbekistan":["Tashkent","Samarkand","Bukhara","Namangan","Andijan","Nukus","Fergana","Khiva","Urgench"],
+  "Tajikistan":["Dushanbe","Khujand","Kulob","Qurghonteppa","Istaravshan"],
+  "Turkmenistan":["Ashgabat","Türkmenabat","Daşoguz","Mary","Balkanabat"],
+  "Kyrgyzstan":["Bishkek","Osh","Jalal-Abad","Karakol","Naryn"],
+  "Afghanistan":["Kabul","Kandahar","Herat","Mazar-i-Sharif","Jalalabad","Kunduz"],
+  "Pakistan":["Karachi","Lahore","Islamabad","Faisalabad","Rawalpindi","Multan","Peshawar","Quetta","Hyderabad","Sialkot","Hunza","Gilgit","Swat"],
+  "India":["Mumbai","Delhi","Bangalore","Hyderabad","Ahmedabad","Chennai","Kolkata","Pune","Jaipur","Surat","Lucknow","Kanpur","Nagpur","Indore","Thane","Bhopal","Visakhapatnam","Agra","Varanasi","Goa","Amritsar","Kochi","Mysore","Rishikesh","Shimla","Jodhpur","Udaipur","Darjeeling","Coimbatore","Chandigarh"],
+  "Nepal":["Kathmandu","Pokhara","Lalitpur","Bharatpur","Biratnagar","Chitwan","Lumbini","Everest Base Camp","Annapurna"],
+  "Sri Lanka":["Colombo","Kandy","Galle","Jaffna","Negombo","Sigiriya","Ella","Nuwara Eliya","Trincomalee","Anuradhapura"],
+  "Bangladesh":["Dhaka","Chittagong","Sylhet","Khulna","Rajshahi","Comilla","Narayanganj","Mymensingh"],
+  "Myanmar":["Yangon","Mandalay","Naypyidaw","Bagan","Inle Lake","Ngapali","Taunggyi","Mawlamyine"],
+  "Thailand":["Bangkok","Chiang Mai","Pattaya","Phuket","Hat Yai","Khon Kaen","Nakhon Ratchasima","Udon Thani","Koh Samui","Krabi","Ayutthaya","Pai","Hua Hin","Chiang Rai"],
+  "Vietnam":["Hanoi","Ho Chi Minh City","Da Nang","Hải Phòng","Hội An","Nha Trang","Cần Thơ","Huế","Hạ Long Bay","Phú Quốc","Sapa","Đà Lạt","Mũi Né"],
+  "Cambodia":["Phnom Penh","Siem Reap","Sihanoukville","Battambang","Kampot","Kep"],
+  "Laos":["Vientiane","Luang Prabang","Pakse","Savannakhet","Vang Vieng"],
+  "Malaysia":["Kuala Lumpur","George Town","Johor Bahru","Ipoh","Shah Alam","Petaling Jaya","Kota Kinabalu","Kuching","Langkawi","Penang","Cameron Highlands","Malacca"],
+  "Singapore":["Singapore","Sentosa","Jurong","Changi","Orchard"],
+  "Indonesia":["Jakarta","Surabaya","Bandung","Medan","Semarang","Makassar","Bali","Yogyakarta","Lombok","Komodo","Raja Ampat","Manado","Flores"],
+  "Philippines":["Manila","Quezon City","Davao","Caloocan","Cebu","Zamboanga","Antipolo","Taguig","Pasig","Boracay","Palawan","Bohol","Siargao","El Nido"],
+  "China":["Beijing","Shanghai","Guangzhou","Shenzhen","Chengdu","Tianjin","Chongqing","Xi'an","Wuhan","Hangzhou","Nanjing","Suzhou","Qingdao","Kunming","Xiamen","Guilin","Zhangjiajie","Lijiang","Harbin","Sanya"],
+  "Japan":["Tokyo","Osaka","Kyoto","Yokohama","Nagoya","Sapporo","Fukuoka","Kobe","Kawasaki","Sendai","Hiroshima","Nara","Nagasaki","Kanazawa","Hakone","Nikko","Kamakura","Okinawa","Matsumoto"],
+  "South Korea":["Seoul","Busan","Incheon","Daegu","Daejeon","Gwangju","Suwon","Ulsan","Jeju","Gyeongju","Sokcho","Jeonju","Andong"],
+  "Taiwan":["Taipei","Kaohsiung","Taichung","Tainan","Hsinchu","Keelung","Sun Moon Lake","Taroko","Jiufen","Alishan"],
+  "Hong Kong":["Hong Kong","Kowloon","Tsim Sha Tsui","Central","Mong Kok","Causeway Bay","Lantau","Sai Kung"],
+  "Mongolia":["Ulaanbaatar","Erdenet","Darkhan","Khovd","Ölgii","Gobi Desert","Karakorum"],
+  "Australia":["Sydney","Melbourne","Brisbane","Perth","Adelaide","Gold Coast","Newcastle","Canberra","Hobart","Darwin","Cairns","Townsville","Ballarat","Geelong","Byron Bay","Alice Springs","Uluru","Broome","Fremantle"],
+  "New Zealand":["Auckland","Wellington","Christchurch","Hamilton","Tauranga","Dunedin","Palmerston North","Queenstown","Rotorua","Napier","Nelson","Milford Sound","Fox Glacier"],
+  "Canada":["Toronto","Montreal","Vancouver","Calgary","Edmonton","Ottawa","Winnipeg","Quebec City","Hamilton","Kitchener","London","Halifax","Victoria","Kelowna","Saskatoon","Regina","Banff","Whistler","Niagara Falls"],
+  "United States":["New York City","Los Angeles","Chicago","Houston","Phoenix","Philadelphia","San Antonio","San Diego","Dallas","San Jose","Austin","Jacksonville","Fort Worth","Columbus","San Francisco","Charlotte","Indianapolis","Seattle","Denver","Washington DC","Nashville","Oklahoma City","El Paso","Boston","Portland","Las Vegas","Memphis","Baltimore","Milwaukee","Albuquerque","Tucson","Fresno","Sacramento","Mesa","Kansas City","Atlanta","Omaha","Colorado Springs","Raleigh","Long Beach","Virginia Beach","Minneapolis","Tampa","New Orleans","Arlington","Bakersfield","Honolulu","Anaheim","Aurora","Santa Ana","Corpus Christi","Riverside","St. Louis","Lexington","Pittsburgh","Anchorage","Stockton","Cincinnati","St. Paul","Toledo","Greensboro","Newark","Plano","Henderson","Lincoln","Buffalo","Fort Wayne","Jersey City","Chula Vista","Orlando","St. Petersburg","Norfolk","Chandler","Laredo","Madison","Durham","Lubbock","Winston-Salem","Garland","Glendale","Hialeah","Reno","Baton Rouge","Irvine","Chesapeake","Irving","Scottsdale","North Las Vegas","Fremont","Gilbert","San Bernardino","Boise","Birmingham","Rochester","Richmond","Spokane","Des Moines","Modesto","Fayetteville","Tacoma","Oxnard","Fontana","Columbus","Montgomery","Moreno Valley","Shreveport","Akron","Yonkers","Glendale","Huntington Beach","Little Rock","Columbus","Amarillo","Grand Rapids","Salt Lake City","Tallahassee","Huntsville","Worcester","Knoxville","Brownsville","Santa Clarita","Providence","Garden Grove","Oceanside","Chattanooga","Fort Lauderdale","Rancho Cucamonga","Santa Rosa","Port Arthur","Tempe","Cape Coral","Oxnard","Eugene","Peoria","Oshkosh","Mt. Sterling","Camarillo"],
+  "Mexico":["Mexico City","Guadalajara","Monterrey","Puebla","Toluca","Tijuana","León","Ciudad Juárez","Zapopan","Cancún","Mérida","Querétaro","San Luis Potosí","Hermosillo","Aguascalientes","Mexicali","Culiacán","Acapulco","Oaxaca","Tulum","Playa del Carmen","Los Cabos","Puerto Vallarta","Guanajuato","San Miguel de Allende"],
+  "Brazil":["São Paulo","Rio de Janeiro","Brasília","Salvador","Fortaleza","Belo Horizonte","Manaus","Curitiba","Recife","Porto Alegre","Belém","Goiânia","Guarulhos","Campinas","São Luís","Maceió","Natal","Teresina","Campo Grande","João Pessoa","Florianópolis","Foz do Iguaçu"],
+  "Argentina":["Buenos Aires","Córdoba","Rosario","Mendoza","Tucumán","La Plata","Mar del Plata","Salta","Santa Fe","San Juan","Bariloche","Ushuaia","Puerto Madryn","El Calafate","Iguazú"],
+  "Colombia":["Bogotá","Medellín","Cali","Barranquilla","Cartagena","Cúcuta","Bucaramanga","Pereira","Santa Marta","Manizales","Ibagué","Villavicencio","Pasto","Popayán"],
+  "Chile":["Santiago","Valparaíso","Concepción","La Serena","Antofagasta","Temuco","Rancagua","Talca","Arica","Iquique","Puerto Montt","Punta Arenas","San Pedro de Atacama","Torres del Paine","Bariloche"],
+  "Peru":["Lima","Arequipa","Trujillo","Chiclayo","Piura","Iquitos","Cusco","Huancayo","Tacna","Chimbote","Machu Picchu","Puno","Nazca","Huaraz"],
+  "Ecuador":["Quito","Guayaquil","Cuenca","Ambato","Santo Domingo","Manta","Portoviejo","Machala","Durán","Esmeraldas","Galápagos"],
+  "Bolivia":["La Paz","Santa Cruz","Cochabamba","Sucre","Oruro","Potosí","Tarija","Trinidad","Uyuni","Copacabana"],
+  "Venezuela":["Caracas","Maracaibo","Valencia","Barquisimeto","Ciudad Guayana","Maturín","Maracay","Angel Falls"],
+  "Uruguay":["Montevideo","Salto","Ciudad de la Costa","Paysandú","Las Piedras","Punta del Este","Colonia del Sacramento"],
+  "Paraguay":["Asunción","Ciudad del Este","San Lorenzo","Luque","Capiatá","Encarnación","Pedro Juan Caballero"],
+  "Morocco":["Casablanca","Marrakech","Fes","Rabat","Agadir","Tangier","Chefchaouen","Essaouira","Meknes","Ouarzazate","Merzouga","Tétouan"],
+  "Egypt":["Cairo","Alexandria","Giza","Luxor","Aswan","Sharm el-Sheikh","Hurghada","Dahab","Port Said","Siwa","Petra","Kom Ombo"],
+  "Tunisia":["Tunis","Sfax","Sousse","Kairouan","Bizerte","Gabès","Ariana","Djerba","Sidi Bou Said","Carthage"],
+  "Algeria":["Algiers","Oran","Constantine","Annaba","Blida","Batna","Djelfa","Sétif","Tlemcen","Ghardaïa"],
+  "Kenya":["Nairobi","Mombasa","Kisumu","Nakuru","Eldoret","Thika","Malindi","Diani Beach","Masai Mara","Lamu","Amboseli"],
+  "Tanzania":["Dar es Salaam","Zanzibar","Arusha","Mwanza","Dodoma","Serengeti","Kilimanjaro","Ngorongoro","Stone Town"],
+  "Ethiopia":["Addis Ababa","Dire Dawa","Mekelle","Gondar","Awasa","Bahir Dar","Lalibela","Axum","Harar"],
+  "South Africa":["Johannesburg","Cape Town","Durban","Pretoria","Port Elizabeth","Bloemfontein","East London","Nelspruit","Kimberley","Stellenbosch","Hermanus","Knysna","Kruger","Soweto","Sandton"],
+  "Nigeria":["Lagos","Abuja","Kano","Ibadan","Kaduna","Port Harcourt","Benin City","Maiduguri","Zaria","Aba","Jos","Ilorin"],
+  "Ghana":["Accra","Kumasi","Tamale","Cape Coast","Sekondi-Takoradi","Sunyani","Ho","Koforidua"],
+  "Senegal":["Dakar","Thiès","Kaolack","Ziguinchor","Saint-Louis","Mbour","Diourbel","Louga"],
+  "Norway":["Oslo","Bergen","Trondheim","Stavanger","Tromsø","Ålesund","Kristiansand","Fredrikstad","Drammen","Flåm","Geirangerfjord","Lofoten","Svalbard"],
+  "Sweden":["Stockholm","Gothenburg","Malmö","Uppsala","Västerås","Örebro","Linköping","Helsingborg","Jönköping","Norrköping","Umeå","Kiruna","Abisko"],
+  "Denmark":["Copenhagen","Aarhus","Odense","Aalborg","Frederiksberg","Esbjerg","Randers","Kolding","Horsens","Vejle","Helsingør","Roskilde","Bornholm"],
+  "Finland":["Helsinki","Espoo","Tampere","Vantaa","Oulu","Turku","Jyväskylä","Lahti","Kuopio","Pori","Rovaniemi","Lapland","Savonlinna"],
+  "Iceland":["Reykjavik","Akureyri","Keflavík","Selfoss","Hafnarfjörður","Ísafjörður","Vik","Húsavík","Mývatn","Blue Lagoon"],
+  "Portugal":["Lisbon","Porto","Vila Nova de Gaia","Amadora","Braga","Setúbal","Coimbra","Funchal","Almada","Aveiro","Évora","Faro","Portimão","Lagos","Sintra","Cascais"],
+  "Spain":["Madrid","Barcelona","Valencia","Seville","Zaragoza","Málaga","Murcia","Palma","Las Palmas","Bilbao","Alicante","Córdoba","Valladolid","Vigo","Gijón","Hospitalet","Vitoria","Granada","Elche","Oviedo","Badalona","Cartagena","Jerez","Sabadell","Santa Cruz de Tenerife","Pamplona","Almería","San Sebastián","Ibiza","Toledo","Salamanca","Segovia","Cádiz","Ronda","Tarragona"],
+  "Italy":["Rome","Milan","Naples","Turin","Palermo","Genoa","Bologna","Florence","Catania","Bari","Venice","Verona","Messina","Padua","Trieste","Brescia","Prato","Taranto","Modena","Reggio Calabria","Reggio Emilia","Perugia","Livorno","Ravenna","Cagliari","Foggia","Rimini","Salerno","Ferrara","Sassari","Syracuse","Bergamo","Pescara","Monza","Vicenza","Trento","Bolzano","Bressanone","Ortisei","Amalfi","Positano","Cinque Terre","Portofino","Siena","Assisi","Pisa","Lucca","Matera","Lecce","Alghero"],
+  "France":["Paris","Marseille","Lyon","Toulouse","Nice","Nantes","Montpellier","Strasbourg","Bordeaux","Lille","Rennes","Reims","Le Havre","Saint-Étienne","Toulon","Grenoble","Dijon","Nîmes","Angers","Villeurbanne","Aix-en-Provence","Cannes","Monaco","Avignon","Perpignan","Metz","Besançon","Orléans","Rouen","Amiens","Caen","Bayonne","Biarritz","Annecy","Chamonix","Colmar","Épernay","Carcassonne","Mont Saint-Michel","Versailles"],
+  "Germany":["Berlin","Hamburg","Munich","Cologne","Frankfurt","Stuttgart","Düsseldorf","Leipzig","Dortmund","Essen","Bremen","Dresden","Hanover","Nuremberg","Duisburg","Bochum","Wuppertal","Bielefeld","Bonn","Münster","Karlsruhe","Mannheim","Augsburg","Wiesbaden","Gelsenkirchen","Mönchengladbach","Braunschweig","Kiel","Aachen","Halle","Magdeburg","Freiburg","Krefeld","Lübeck","Oberhausen","Erfurt","Mainz","Rostock","Kassel","Hagen","Saarbrücken","Hamm","Heidelberg","Potsdam","Würzburg","Neuss","Paderborn","Ingolstadt","Offenbach","Cologne","Trier","Constance","Rothenburg ob der Tauber","Regensburg","Bamberg","Passau","Berchtesgaden","Garmisch-Partenkirchen","Baden-Baden"],
+};
+
+// Merge EXTRA_CITIES into CCITIES
+Object.entries(EXTRA_CITIES).forEach(([country, cities]) => {
+  if (!CCITIES[country]) CCITIES[country] = [];
+  cities.forEach(c => { if (!CCITIES[country].includes(c)) CCITIES[country].push(c); });
+});
+
+XI.addEventListener('input', () => {
+  const q = XI.value.trim(); xcur=-1;
+  if (!q || !sel) { closeD(XD); return; }
+  clearTimeout(xtimer);
+  xtimer = setTimeout(() => sugX(q), 300);
+});
+
+async function sugX(rawQ) {
+  const q = rawQ.trim();
+  if (!q) return;
+  // Stale check
+  if (normStr(XI.value.trim()) !== normStr(q)) return;
+  const nq = normStr(q);
+
+  // Always show local hits first
+  const localHits = (CCITIES[sel]||[]).filter(c => normStr(c).includes(nq));
+  const coordHits = Object.keys(COORDS).filter(c => normStr(c).includes(nq) && !localHits.includes(c)).slice(0,3);
+  const allLocal = [...localHits, ...coordHits];
+  showDropItems(allLocal, q);
+
+  // AI search (runs in parallel, doesn't block local results)
+  const cacheKey = sel + '|' + nq;
+  if (citySearchCache[cacheKey]) {
+    showDropItems(mergeResults(allLocal, citySearchCache[cacheKey]), q);
+    return;
+  }
+
+  // Abort any previous in-flight request
+  if (pendingSearch) { pendingSearch.abort(); }
+  const ctrl = new AbortController();
+  pendingSearch = ctrl;
+  showLoadingIndicator();
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      signal: ctrl.signal,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 600,
+        system: `You are a comprehensive world city database. Given a country and a search query, return matching cities/towns/places.
+Rules:
+- Match even if query lacks accents/diacritics (e.g. "Podgorica" matches "Podgorica", "Krakow" matches "Kraków")  
+- Match partial names (e.g. "Leeds" matches "Leeds")
+- Include the correct official name with proper diacritics
+- Include coordinates (lat/lng)
+- Return 8-12 results covering well-known AND smaller places
+- Respond ONLY with a JSON array, no markdown: [{"name":"City Name","lat":12.345,"lng":67.890}]`,
+        messages: [{
+          role: 'user',
+          content: `Country: ${sel}\nSearch: "${q}"\nReturn JSON array of matching cities/places with lat/lng.`
+        }]
+      })
+    });
+
+    if (ctrl.signal.aborted) return;
+    const data = await resp.json();
+    const text = (data.content||[]).map(b => b.text||'').join('');
+    let results = [];
+    try {
+      const m = text.match(/\[[\s\S]*?\]/);
+      if (m) results = JSON.parse(m[0]);
+    } catch(e) {}
+
+    // Store coords
+    results.forEach(r => {
+      if (r.name && r.lat != null && r.lng != null) {
+        COORDS[r.name] = [parseFloat(r.lat), parseFloat(r.lng)];
+        // Also store normalised version for lookup
+        COORDS[normStr(r.name)] = [parseFloat(r.lat), parseFloat(r.lng)];
+      }
+    });
+
+    const aiNames = results.map(r => r.name).filter(Boolean);
+    citySearchCache[cacheKey] = aiNames;
+
+    // Only update if input hasn't changed
+    if (normStr(XI.value.trim()) === nq) {
+      showDropItems(mergeResults(allLocal, aiNames), q);
+    }
+  } catch(e) {
+    if (e.name !== 'AbortError') {
+      showDropItems(allLocal, q);
+    }
+  } finally {
+    if (pendingSearch === ctrl) pendingSearch = null;
+  }
+}
+
+function mergeResults(local, ai) {
+  const seen = new Set(local.map(normStr));
+  const merged = [...local];
+  ai.forEach(c => { const n = normStr(c); if (!seen.has(n)) { seen.add(n); merged.push(c); } });
+  return merged;
+}
+
+function showLoadingIndicator() {
+  // Add spinner at bottom of existing dropdown if open, else show it
+  const existing = XD.querySelectorAll('.acr');
+  if (existing.length === 0) {
+    XD.innerHTML = '<div class="ac-loading"><div class="ac-spin"></div>Searching…</div>';
+    XD.classList.add('open');
+  } else {
+    // Append spinner row
+    const s = document.createElement('div');
+    s.className = 'ac-loading';
+    s.innerHTML = '<div class="ac-spin"></div>Searching more…';
+    XD.appendChild(s);
+  }
+}
+
+function showDropItems(cities, rawQ) {
+  const cap = XI.value.trim();
+  if (!cap) { closeD(XD); return; }
+  const seen = new Set();
+  const unique = cities.filter(c => { const k=normStr(c); if(seen.has(k)) return false; seen.add(k); return true; });
+  const exact = unique.some(c => normStr(c) === normStr(cap));
+  const rows = unique.slice(0,10).map(c => {
+    const kn = !!(COORDS[c] || COORDS[normStr(c)]);
+    const safe = c.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div class="acr" data-name="${c.replace(/"/g,'&quot;')}" onmousedown="event.preventDefault();selX('${safe}')">
+      <span>${kn?'📍':'🏙️'}</span>${c}${kn?'<span class="sub">pinnable</span>':''}
+    </div>`;
+  });
+  if (!exact && cap) {
+    const safe = cap.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    rows.push(`<div class="acr" data-name="${cap.replace(/"/g,'&quot;')}" onmousedown="event.preventDefault();selX('${safe}')">
+      <span>✏️</span>${cap}<span class="sub">add manually</span>
+    </div>`);
+  }
+  if (!rows.length) { closeD(XD); return; }
+  XD.innerHTML = rows.join('');
+  XD.classList.add('open');
+  xcur = -1;
+}
+function selX(n) { XI.value=n; closeD(XD); setTimeout(doAdd, 60); }
+function hl(rs,i) { rs.forEach((r,j)=>r.classList.toggle('hi',j===i)); if(rs[i])rs[i].scrollIntoView({block:'nearest'}); }
+function closeD(el) { el.classList.remove('open'); }
+document.addEventListener('click', e => {
+  if (!e.target.closest('.acw') && !e.target.closest('.cbadge')) { closeD(CD); closeD(XD); }
+});
+
+function doAdd() {
+  const city = XI.value.trim();
+  if (!city || !sel) return;
+  if (!visits[sel]) visits[sel] = [];
+  // Check for duplicate using normalised comparison
+  const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+  if (visits[sel].some(c => norm(c) === norm(city))) {
+    XI.style.borderColor='var(--accent2)'; setTimeout(()=>XI.style.borderColor='',600); return;
+  }
+  visits[sel].push(city);
+  saveVisits();
+  XI.value=''; closeD(XD); XI.focus(); refresh();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXPORT / IMPORT
+// ─────────────────────────────────────────────────────────────────────────────
+function exportCities() {
+  const data = JSON.stringify(visits, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'my-travel-map-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importCities(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (parsed && typeof parsed === 'object') {
+        // Merge imported into current visits
+        Object.entries(parsed).forEach(([country, cities]) => {
+          if (!visits[country]) visits[country] = [];
+          cities.forEach(city => {
+            if (!visits[country].includes(city)) visits[country].push(city);
+          });
+        });
+        saveVisits();
+        refresh();
+        alert('✅ Cities imported successfully!');
+      }
+    } catch(err) {
+      alert('❌ Invalid file. Please use a previously exported JSON file.');
+    }
+    event.target.value = ''; // reset so same file can be re-imported
+  };
+  reader.readAsText(file);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SIDEBAR TOGGLE
+// ─────────────────────────────────────────────────────────────────────────────
+document.getElementById('tbtn').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('closed');
+  setTimeout(() => map.invalidateSize(), 300);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NUMERIC ISO MAP (world-atlas numeric id → display name)
+// ─────────────────────────────────────────────────────────────────────────────
+function buildNumMap() {
+  const N2I={4:"AFG",8:"ALB",12:"DZA",24:"AGO",32:"ARG",36:"AUS",40:"AUT",31:"AZE",
+    50:"BGD",112:"BLR",56:"BEL",68:"BOL",76:"BRA",100:"BGR",116:"KHM",120:"CMR",
+    124:"CAN",152:"CHL",156:"CHN",170:"COL",188:"CRI",191:"HRV",192:"CUB",196:"CYP",
+    203:"CZE",208:"DNK",180:"COD",214:"DOM",218:"ECU",818:"EGY",222:"SLV",231:"ETH",
+    246:"FIN",250:"FRA",268:"GEO",276:"DEU",288:"GHA",300:"GRC",320:"GTM",324:"GIN",
+    332:"HTI",340:"HND",348:"HUN",356:"IND",360:"IDN",364:"IRN",368:"IRQ",372:"IRL",
+    376:"ISR",380:"ITA",392:"JPN",400:"JOR",398:"KAZ",404:"KEN",418:"LAO",422:"LBN",
+    434:"LBY",442:"LUX",450:"MDG",458:"MYS",466:"MLI",484:"MEX",496:"MNG",504:"MAR",
+    508:"MOZ",104:"MMR",524:"NPL",528:"NLD",554:"NZL",558:"NIC",562:"NER",566:"NGA",
+    578:"NOR",512:"OMN",586:"PAK",591:"PAN",600:"PRY",604:"PER",608:"PHL",616:"POL",
+    620:"PRT",634:"QAT",642:"ROU",643:"RUS",682:"SAU",686:"SEN",688:"SRB",703:"SVK",
+    705:"SVN",706:"SOM",710:"ZAF",410:"KOR",724:"ESP",144:"LKA",729:"SDN",752:"SWE",
+    756:"CHE",760:"SYR",158:"TWN",762:"TJK",834:"TZA",764:"THA",788:"TUN",792:"TUR",
+    800:"UGA",804:"UKR",826:"GBR",840:"USA",858:"URY",860:"UZB",862:"VEN",704:"VNM",
+    887:"YEM",894:"ZMB",716:"ZWE",384:"CIV",454:"MWI",232:"ERI",430:"LBR",478:"MRT",
+    768:"TGO",204:"BEN",408:"PRK",780:"TTO",44:"BHS",84:"BLZ",388:"JAM",328:"GUY",
+    740:"SUR",64:"BTN",96:"BRN",70:"BIH",72:"BWA",68:"BOL",
+    352:"ISL",470:"MLT",499:"MNE",807:"MKD",784:"ARE",344:"HKG",438:"LIE",850:"VIR"};
+  const I2N={AFG:"Afghanistan",ALB:"Albania",DZA:"Algeria",AGO:"Angola",ARG:"Argentina",
+    AUS:"Australia",AUT:"Austria",AZE:"Azerbaijan",BGD:"Bangladesh",BLR:"Belarus",
+    BEL:"Belgium",BOL:"Bolivia",BIH:"Bosnia and Herzegovina",BWA:"Botswana",BRA:"Brazil",
+    BGR:"Bulgaria",KHM:"Cambodia",CMR:"Cameroon",CAN:"Canada",CHL:"Chile",CHN:"China",
+    COL:"Colombia",CRI:"Costa Rica",HRV:"Croatia",CUB:"Cuba",CYP:"Cyprus",CZE:"Czech Republic",
+    DNK:"Denmark",COD:"DR Congo",DOM:"Dominican Republic",ECU:"Ecuador",EGY:"Egypt",
+    SLV:"El Salvador",ETH:"Ethiopia",FIN:"Finland",FRA:"France",GEO:"Georgia",DEU:"Germany",
+    GHA:"Ghana",GRC:"Greece",GTM:"Guatemala",GIN:"Guinea",HTI:"Haiti",HND:"Honduras",
+    HUN:"Hungary",IND:"India",IDN:"Indonesia",IRN:"Iran",IRQ:"Iraq",IRL:"Ireland",
+    ISR:"Israel",ITA:"Italy",JPN:"Japan",JOR:"Jordan",KAZ:"Kazakhstan",KEN:"Kenya",
+    LAO:"Laos",LBN:"Lebanon",LBY:"Libya",LUX:"Luxembourg",MDG:"Madagascar",MYS:"Malaysia",
+    MLI:"Mali",MEX:"Mexico",MNG:"Mongolia",MAR:"Morocco",MOZ:"Mozambique",MMR:"Myanmar",
+    NPL:"Nepal",NLD:"Netherlands",NZL:"New Zealand",NIC:"Nicaragua",NER:"Niger",NGA:"Nigeria",
+    NOR:"Norway",OMN:"Oman",PAK:"Pakistan",PAN:"Panama",PRY:"Paraguay",PER:"Peru",
+    PHL:"Philippines",POL:"Poland",PRT:"Portugal",QAT:"Qatar",ROU:"Romania",RUS:"Russia",
+    SAU:"Saudi Arabia",SEN:"Senegal",SRB:"Serbia",SVK:"Slovakia",SVN:"Slovenia",SOM:"Somalia",
+    ZAF:"South Africa",KOR:"South Korea",ESP:"Spain",LKA:"Sri Lanka",SDN:"Sudan",SWE:"Sweden",
+    CHE:"Switzerland",SYR:"Syria",TWN:"Taiwan",TJK:"Tajikistan",TZA:"Tanzania",THA:"Thailand",
+    TUN:"Tunisia",TUR:"Turkey",UGA:"Uganda",UKR:"Ukraine",GBR:"United Kingdom",USA:"United States",
+    URY:"Uruguay",UZB:"Uzbekistan",VEN:"Venezuela",VNM:"Vietnam",YEM:"Yemen",ZMB:"Zambia",
+    ZWE:"Zimbabwe",CIV:"Cote d'Ivoire",MWI:"Malawi",ERI:"Eritrea",LBR:"Liberia",
+    MRT:"Mauritania",TGO:"Togo",BEN:"Benin",PRK:"North Korea",TTO:"Trinidad and Tobago",
+    BHS:"Bahamas",BLZ:"Belize",JAM:"Jamaica",GUY:"Guyana",SUR:"Suriname",BTN:"Bhutan",
+    BRN:"Brunei",BOL:"Bolivia",BWA:"Botswana",BIH:"Bosnia and Herzegovina",
+    ISL:"Iceland",MLT:"Malta",MNE:"Montenegro",MKD:"North Macedonia",ARE:"UAE",HKG:"Hong Kong",LIE:"Liechtenstein"};
+  const out = {};
+  for (const [num, iso] of Object.entries(N2I)) {
+    const name = I2N[iso];
+    if (name) out[+num] = name;
+  }
+  return out;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TOOLTIP STYLE INJECTION
+// ─────────────────────────────────────────────────────────────────────────────
+const style = document.createElement('style');
+style.textContent = `
+  .country-tooltip {
+    background: #111827 !important;
+    border: 1px solid #2a3a4a !important;
+    border-left: 3px solid #f0a500 !important;
+    border-radius: 6px !important;
+    color: #e6edf3 !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.8rem !important;
+    padding: 6px 10px !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+  }
+  .country-tooltip strong { font-family: 'Playfair Display', serif; font-size: 0.9rem; display: block; }
+  .country-tooltip span { color: #6b7f94; font-size: 0.72rem; }
+  .country-tooltip::before { display: none !important; }
+  .leaflet-tooltip-top.country-tooltip::before { border-top-color: #2a3a4a !important; }
+  .city-tooltip {
+    background: #0a0f1a !important;
+    border: 1px solid #f0a500 !important;
+    border-radius: 5px !important;
+    color: #e6edf3 !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.8rem !important;
+    font-weight: 500 !important;
+    padding: 4px 9px !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.6) !important;
+    white-space: nowrap !important;
+  }
+  .city-tooltip::before { border-top-color: #f0a500 !important; }
+`;
+document.head.appendChild(style);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────────────────────
+loadCountries();
+renderPins();
+renderList();
+updStats();
+// Force Leaflet to recalculate size after full render
+setTimeout(() => map.invalidateSize(), 200);
+</script>
+</body>
+</html>
