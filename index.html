@@ -99,10 +99,67 @@ header h1 span{color:var(--muted);font-size:0.78rem;font-family:'DM Sans',sans-s
   .pill.active-joint{background:#a855f722;border-color:#a855f7;color:#a855f7;}
   .pill.active-both{background:#ffffff11;border-color:#888;color:#ccc;}
   .cgh.joint-header{color:#a855f7;}
+
+  /* Right-click context menu */
+  #ctx-menu {
+    position: fixed; z-index: 9999;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+    padding: 5px;
+    min-width: 190px;
+    display: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+  }
+  #ctx-menu.visible { display: block; }
+  .ctx-item {
+    padding: 7px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text);
+    display: flex; align-items: center; gap: 9px;
+    transition: background 0.12s;
+    white-space: nowrap;
+  }
+  .ctx-item:hover { background: var(--surface2); }
+  .ctx-item.danger { color: var(--accent2); }
+  .ctx-item .ctx-icon { font-size: 0.9rem; width: 16px; text-align: center; flex-shrink: 0; }
+  .ctx-sep { height: 1px; background: var(--border); margin: 4px 0; }
+  .ctx-label {
+    padding: 5px 12px 3px;
+    font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted);
+  }
 .cil{display:flex;align-items:center;}
 .delbtn{background:transparent;color:#e05c2e33;border:none;font-size:0.75rem;
   cursor:pointer;padding:1px 5px;border-radius:3px;transition:color 0.15s;}
 .delbtn:hover{color:var(--accent2);}
+
+/* Right-click context menu */
+#ctx-menu{
+  position:fixed;z-index:9999;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:5px 0;min-width:190px;
+  box-shadow:0 8px 30px rgba(0,0,0,0.6);
+  display:none;
+}
+#ctx-menu.open{display:block;}
+.ctx-label{
+  padding:4px 14px 2px;font-size:0.6rem;text-transform:uppercase;
+  letter-spacing:0.1em;color:var(--muted);
+}
+.ctx-item{
+  padding:7px 14px;font-size:0.82rem;color:var(--text);
+  cursor:pointer;display:flex;align-items:center;gap:9px;
+  transition:background 0.12s;
+}
+.ctx-item:hover{background:var(--surface2);}
+.ctx-item.avi-color{color:#f0a500;}
+.ctx-item.joint-color{color:#a855f7;}
+.ctx-item.danger{color:var(--accent2);}
+.ctx-sep{height:1px;background:var(--border);margin:4px 0;}
 
 /* LEGEND */
 .legend{padding:9px 13px;border-top:1px solid var(--border);flex-shrink:0;}
@@ -899,7 +956,8 @@ function renderList() {
           : type === 'joint' ? ' <span style="font-size:0.65rem;color:#a855f7">💑</span>'
           : '';
         const safe = esc(ci), safeC = esc(c);
-        return `<div class="ci" onclick="flyToCity('${safe}')">
+        return `<div class="ci" onclick="flyToCity('${safe}')"
+            oncontextmenu="event.preventDefault();event.stopPropagation();openCtxMenu(event,'${safe}','${safeC}','${type}')">
           <div class="cil"><div class="cdot${dotClass?' '+dotClass:''}"></div>${ci}${badge}</div>
           <button class="delbtn" onclick="event.stopPropagation();delCity('${safe}','${safeC}','${type}')">✕</button>
         </div>`;
@@ -1328,6 +1386,106 @@ function importCities(event) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CONTEXT MENU
+// ─────────────────────────────────────────────────────────────────────────────
+let ctxCity = null, ctxCountry = null, ctxType = null;
+
+function showCtxMenu(e, city, country, type) {
+  e.preventDefault();
+  e.stopPropagation();
+  ctxCity = city; ctxCountry = country; ctxType = type;
+
+  const menu = document.getElementById('ctx-menu');
+  document.getElementById('ctx-city-name').textContent = city;
+
+  // Show/hide options based on current layer membership
+  const inAvi   = (visits[country]      || []).includes(city);
+  const inJoint = (jointVisits[country] || []).includes(city);
+
+  // Move to Avi: only if NOT already only in Avi
+  document.getElementById('ctx-move-avi').style.display   = inJoint ? 'flex' : 'none';
+  // Copy to Avi: only if not already in Avi
+  document.getElementById('ctx-copy-avi').style.display   = !inAvi  ? 'flex' : 'none';
+  // Move to Joint: only if NOT already only in Joint
+  document.getElementById('ctx-move-joint').style.display = inAvi   ? 'flex' : 'none';
+  // Copy to Joint: only if not already in Joint
+  document.getElementById('ctx-copy-joint').style.display = !inJoint ? 'flex' : 'none';
+
+  // Position near cursor, keep inside viewport
+  menu.classList.add('visible');
+  const mw = menu.offsetWidth || 200, mh = menu.offsetHeight || 200;
+  const vw = window.innerWidth,       vh = window.innerHeight;
+  let x = e.clientX + 4, y = e.clientY + 4;
+  if (x + mw > vw) x = e.clientX - mw - 4;
+  if (y + mh > vh) y = e.clientY - mh - 4;
+  menu.style.left = x + 'px';
+  menu.style.top  = y + 'px';
+}
+
+function hideCtxMenu() {
+  document.getElementById('ctx-menu').classList.remove('visible');
+  ctxCity = ctxCountry = ctxType = null;
+}
+
+function ctxAction(action, targetLayer) {
+  if (!ctxCity || !ctxCountry) return;
+  const city = ctxCity, country = ctxCountry;
+  const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+
+  if (action === 'remove') {
+    delCity(city, country, 'both');
+    hideCtxMenu(); return;
+  }
+
+  if (action === 'move' || action === 'copy') {
+    if (targetLayer === 'avi') {
+      // Add to Avi
+      if (!visits[country]) visits[country] = [];
+      if (!visits[country].some(c => norm(c) === norm(city))) {
+        visits[country].push(city); saveVisits();
+      }
+      // If move: remove from joint
+      if (action === 'move') {
+        if (jointVisits[country]) {
+          jointVisits[country] = jointVisits[country].filter(c => norm(c) !== norm(city));
+          if (!jointVisits[country].length) delete jointVisits[country];
+          saveJoint();
+        }
+      }
+    } else {
+      // Add to joint
+      if (!jointVisits[country]) jointVisits[country] = [];
+      if (!jointVisits[country].some(c => norm(c) === norm(city))) {
+        jointVisits[country].push(city); saveJoint();
+      }
+      // Also keep in visits for country coloring
+      if (!visits[country]) visits[country] = [];
+      if (!visits[country].some(c => norm(c) === norm(city))) {
+        visits[country].push(city); saveVisits();
+      }
+      // If move: remove from avi-only
+      if (action === 'move') {
+        if (visits[country]) {
+          visits[country] = visits[country].filter(c => norm(c) !== norm(city));
+          if (!visits[country].length) delete visits[country];
+          saveVisits();
+        }
+      }
+    }
+    refresh();
+  }
+  hideCtxMenu();
+}
+
+// Close menu on any click outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('#ctx-menu')) hideCtxMenu();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') hideCtxMenu();
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // SIDEBAR TOGGLE
 // ─────────────────────────────────────────────────────────────────────────────
 document.getElementById('tbtn').addEventListener('click', () => {
@@ -1436,5 +1594,38 @@ updStats();
 // Force Leaflet to recalculate size after full render
 setTimeout(() => map.invalidateSize(), 200);
 </script>
+<!-- Right-click context menu -->
+<div id="ctx-menu">
+  <div class="ctx-label" id="ctx-city-name"></div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item avi-color"   onclick="ctxAction('move','avi')">   ↪ Move to Avi</div>
+  <div class="ctx-item joint-color" onclick="ctxAction('move','joint')"> ↪ Move to Vecus &amp; Avi</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item avi-color"   onclick="ctxAction('copy','avi')">   ⊕ Copy to Avi</div>
+  <div class="ctx-item joint-color" onclick="ctxAction('copy','joint')"> ⊕ Copy to Vecus &amp; Avi</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger"      onclick="ctxAction('delete',null)">  ✕ Remove city</div>
+</div>
+  <!-- Right-click context menu -->
+  <div id="ctx-menu">
+    <div class="ctx-label" id="ctx-city-name">City</div>
+    <div class="ctx-sep"></div>
+    <div id="ctx-move-avi"   class="ctx-item" onclick="ctxAction('move','avi')">
+      <span class="ctx-icon">🟡</span>Move to Avi
+    </div>
+    <div id="ctx-copy-avi"   class="ctx-item" onclick="ctxAction('copy','avi')">
+      <span class="ctx-icon">🟡</span>Copy to Avi
+    </div>
+    <div id="ctx-move-joint" class="ctx-item" onclick="ctxAction('move','joint')">
+      <span class="ctx-icon">🟣</span>Move to Vecus & Avi
+    </div>
+    <div id="ctx-copy-joint" class="ctx-item" onclick="ctxAction('copy','joint')">
+      <span class="ctx-icon">🟣</span>Copy to Vecus & Avi
+    </div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item danger" onclick="ctxAction('remove',null)">
+      <span class="ctx-icon">✕</span>Remove city
+    </div>
+  </div>
 </body>
 </html>
