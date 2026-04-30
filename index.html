@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
 <style>
 :root {
   --bg:#0a0f1a; --surface:#111827; --surface2:#1e2a3a;
@@ -239,7 +240,7 @@ header h1 span{color:var(--muted);font-size:0.78rem;font-family:'DM Sans',sans-s
         <div class="acd" id="xdrop"></div>
       </div>
       <!-- Layer selector -->
-      <div id="layer-sel" style="display:none;gap:5px;display:none">
+      <div id="layer-sel" style="display:none">
         <div style="font-size:0.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px;">Add to layer:</div>
         <div style="display:flex;gap:6px;">
           <button id="lbtn-avi" onclick="setAddLayer('avi')"
@@ -766,10 +767,8 @@ async function loadCountries() {
     world = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json').then(r => r.json());
   } catch(e) { console.warn('Could not load country outlines'); return; }
 
-  // Convert TopoJSON → GeoJSON using topojson-client loaded inline
-  const script = document.createElement('script');
-  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js';
-  script.onload = () => {
+  // Convert TopoJSON → GeoJSON (topojson loaded in <head>)
+  (() => {
     const geojson = topojson.feature(world, world.objects.countries);
     // Build numeric id → country name map
     const numMap = buildNumMap();
@@ -789,7 +788,6 @@ async function loadCountries() {
       onEachFeature: (feature, layer) => {
         const name = numMap[+feature.id];
         if (!name) return;
-        const n = (visits[name] || []).length;
         const aviN2   = (visits[name]||[]).length;
         const jointN2 = (jointVisits[name]||[]).length;
         const totalN  = new Set([...(visits[name]||[]),...(jointVisits[name]||[])]).size;
@@ -802,8 +800,7 @@ async function loadCountries() {
         );
       }
     }).addTo(map);
-  };
-  document.head.appendChild(script);
+  })();
 }
 
 function visitColorHex(n) {
@@ -957,7 +954,7 @@ function renderList() {
           : '';
         const safe = esc(ci), safeC = esc(c);
         return `<div class="ci" onclick="flyToCity('${safe}')"
-            oncontextmenu="event.preventDefault();event.stopPropagation();openCtxMenu(event,'${safe}','${safeC}','${type}')">
+            oncontextmenu="event.preventDefault();event.stopPropagation();showCtxMenu(event,'${safe}','${safeC}','${type}')">
           <div class="cil"><div class="cdot${dotClass?' '+dotClass:''}"></div>${ci}${badge}</div>
           <button class="delbtn" onclick="event.stopPropagation();delCity('${safe}','${safeC}','${type}')">✕</button>
         </div>`;
